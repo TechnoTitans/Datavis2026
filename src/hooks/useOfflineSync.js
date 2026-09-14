@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { flushOfflineQueue } from '../utils/offlineProcessor'
 import { getPendingOpsCount } from '../utils/offlineQueue'
 import { supabaseConfigured } from '../supabaseClient'
@@ -8,6 +8,7 @@ export const useOfflineSync = () => {
   const [pendingCount, setPendingCount] = useState(0)
   const [syncing, setSyncing] = useState(false)
   const [lastSyncResult, setLastSyncResult] = useState(null)
+  const syncingRef = useRef(false)
 
   const refreshPendingCount = useCallback(async () => {
     try {
@@ -19,21 +20,23 @@ export const useOfflineSync = () => {
   }, [])
 
   const syncNow = useCallback(async () => {
-    if (syncing) return
+    if (syncingRef.current) return
     if (!supabaseConfigured) return
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       setLastSyncResult({ synced: 0, stoppedOnNetwork: true })
       return
     }
+    syncingRef.current = true
     setSyncing(true)
     try {
       const result = await flushOfflineQueue()
       setLastSyncResult(result)
     } finally {
+      syncingRef.current = false
       setSyncing(false)
       refreshPendingCount()
     }
-  }, [refreshPendingCount, syncing])
+  }, [refreshPendingCount])
 
   useEffect(() => {
     refreshPendingCount()

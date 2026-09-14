@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TeamSelector from '../components/TeamSelector'
-import StatCharts from '../components/charts/StatCharts'
-import Loading from '../components/Loading'
 import { useSelectedTeams, useLocalStorage } from '../hooks/useLocalStorage'
 import { useTeamSummary } from '../hooks/useTeamSummary'
 import { useCompareData } from '../hooks/useCompareData'
@@ -29,19 +27,6 @@ const COMPARE_STAT_FIELDS = [
   'Broke Down',
 ]
 
-const PRIMARY_ACTION_FIELDS = [
-  'Pin',
-  'Ram',
-  'Block',
-  'Steal',
-  'Anti Pin',
-  'Anti Ram',
-  'Anti Block',
-  'Anti Steal',
-]
-
-const EXTRA_ACTION_FIELDS = ['Penalties', 'Bump', 'Trench', 'Broke Down']
-
 const RATING_FIELDS = [
   'Pin',
   'Ram',
@@ -52,10 +37,6 @@ const RATING_FIELDS = [
   'Anti Block',
   'Anti Steal',
 ]
-
-const getSummaryMetric = (teamSummary, fieldName) => {
-  return teamSummary?.[fieldName] || null
-}
 
 const getSummaryNumericValue = (teamSummary, fieldName) => {
   const metric = teamSummary?.[fieldName]
@@ -74,25 +55,6 @@ const getSummaryNumericValue = (teamSummary, fieldName) => {
   return null
 }
 
-const formatMetricSummary = (metric) => {
-  if (!metric) return '—'
-
-  if (metric.type === 'scoring') {
-    const attempts = Number(metric.avgAttempts)
-    const made = Number(metric.average)
-    const attemptsLabel = Number.isFinite(attempts) ? attempts.toFixed(2) : String(metric.avgAttempts)
-    const madeLabel = Number.isFinite(made) ? made.toFixed(2) : String(metric.average)
-    return `Attempts: ${attemptsLabel} | Success: ${metric.successRate}% | Made: ${madeLabel}`
-  }
-
-  if (metric.type === 'number') {
-    const value = Number(metric.value)
-    return Number.isFinite(value) ? value.toFixed(2) : String(metric.value)
-  }
-
-  return `${metric.value} (${metric.percent}%)`
-}
-
 const fetchTeamOPR = async (teamNumber) => {
   try {
     const apiKey = import.meta.env.VITE_TBA_API_KEY
@@ -109,9 +71,7 @@ const fetchTeamOPR = async (teamNumber) => {
       return null
     }
     const data = await response.json()
-    const opr = data?.stat_median?.opr ?? null
-    console.log(`OPR for team ${teamNumber}: ${opr}`)
-    return opr
+    return data?.stat_median?.opr ?? null
   } catch (error) {
     console.error(`Failed to fetch OPR for team ${teamNumber}:`, error)
     return null
@@ -236,7 +196,7 @@ function Compare() {
 
   const [selectedTeams, setSelectedTeams] = useSelectedTeams('selectedTeams', [])
   const [selectedStat, setSelectedStat] = useLocalStorage('selectedStat', '', (v) => v, (v) => v)
-  const [useMaxValues, setUseMaxValues] = useLocalStorage('compareUseMax', false)
+  const [useMaxValues] = useLocalStorage('compareUseMax', false)
   const [sourceMode, setSourceMode] = useLocalStorage(
     'compareSourceMode',
     'combined',
@@ -245,9 +205,6 @@ function Compare() {
   )
   const [useDataOnly, setUseDataOnly] = useLocalStorage('compareUseDataOnly', true)
   const [selectedScouters, setSelectedScouters] = useLocalStorage('compareSelectedScouters', [])
-  const [statSearchTerm, setStatSearchTerm] = useState('')
-  const [showStatGrid, setShowStatGrid] = useState(false)
-  const [expandedCells, setExpandedCells] = useState(new Set())
   const [oprData, setOprData] = useState({})
   const [pinnedField, setPinnedField] = useState(null)
 
@@ -273,20 +230,16 @@ function Compare() {
 
   const summary = useTeamSummary(matchRows, useMaxValues)
 
-  const availableFields = useMemo(() => {
-    return COMPARE_STAT_FIELDS
-  }, [])
-
   useEffect(() => {
-    if (!availableFields.length) {
+    if (!COMPARE_STAT_FIELDS.length) {
       if (selectedStat) setSelectedStat('')
       return
     }
 
-    if (!selectedStat || !availableFields.includes(selectedStat)) {
-      setSelectedStat(availableFields[0])
+    if (!selectedStat || !COMPARE_STAT_FIELDS.includes(selectedStat)) {
+      setSelectedStat(COMPARE_STAT_FIELDS[0])
     }
-  }, [availableFields, selectedStat, setSelectedStat])
+  }, [selectedStat, setSelectedStat])
 
   useEffect(() => {
     const fetchOPRForTeams = async () => {
@@ -316,9 +269,9 @@ function Compare() {
   }, [safeSelectedTeams, matchRows, summary])
 
   const sortedFields = useMemo(() => {
-    if (!pinnedField) return availableFields
-    return [pinnedField, ...availableFields.filter(f => f !== pinnedField)]
-  }, [availableFields, pinnedField])
+    if (!pinnedField) return COMPARE_STAT_FIELDS
+    return [pinnedField, ...COMPARE_STAT_FIELDS.filter(f => f !== pinnedField)]
+  }, [pinnedField])
 
   const handleFieldDoubleClick = (field) => {
     setPinnedField(prev => prev === field ? null : field)
@@ -351,65 +304,10 @@ function Compare() {
     setSelectedTeams([])
   }
 
-  const resetCompareFilters = () => {
-    setSourceMode('combined')
-    setUseDataOnly(false)
-    setSelectedScouters([])
-    setSelectedTeams([])
-  }
-
   const handleTeamClick = (teamNumber) => {
     localStorage.setItem('selectedTeamsAnalysis', JSON.stringify([String(teamNumber)]))
     navigate('/team-analysis')
   }
-
-  const handleCellClick = (team, field) => {
-    const cellId = `${team}-${field}`
-    setExpandedCells(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(cellId)) {
-        newSet.delete(cellId)
-      } else {
-        newSet.add(cellId)
-      }
-      return newSet
-    })
-  }
-
-  const filteredStats = availableFields.filter(stat =>
-    stat.toLowerCase().includes(statSearchTerm.toLowerCase())
-  )
-
-  const capabilityCards = useMemo(() => {
-    return safeSelectedTeams
-      .map((team) => {
-        const teamSummary = summary[team]
-        if (!teamSummary) return null
-
-        const actions = PRIMARY_ACTION_FIELDS.map((field) => {
-          const metric = getSummaryMetric(teamSummary, field)
-          const numericValue = getSummaryNumericValue(teamSummary, field)
-          return { field, metric, numericValue }
-        })
-
-        const activeActions = actions.filter(
-          (action) => action.numericValue !== null && action.numericValue > 0,
-        )
-        const extras = EXTRA_ACTION_FIELDS.map((field) => ({
-          field,
-          metric: getSummaryMetric(teamSummary, field),
-        }))
-
-        return {
-          team,
-          actions,
-          activeActions,
-          extras,
-        }
-      })
-      .filter(Boolean)
-  }, [safeSelectedTeams, summary])
-
 
   return (
     <div className="compare-container">
@@ -506,7 +404,7 @@ function Compare() {
                   </h3>
 
                   {oprData[team] !== undefined && (
-                    <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'rgba(219, 234, 254, 0.82)', borderBottom: '1px solid rgba(148, 163, 184, 0.28)', fontWeight: 600 }}>
+                    <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'rgba(204, 251, 241, 0.82)', borderBottom: '1px solid rgba(148, 163, 184, 0.28)', fontWeight: 600 }}>
                       <strong>OPR (The Blue Alliance):</strong> {oprData[team] !== null ? oprData[team].toFixed(2) : 'N/A'}
                     </div>
                   )}
@@ -543,7 +441,6 @@ function Compare() {
                             <tr key={field}>
                               <td
                                 style={fieldCellStyle}
-                                onClick={() => handleCellClick(team, field)}
                                 onDoubleClick={() => handleFieldDoubleClick(field)}
                                 title="Double-click to pin this field to the top"
                               >
@@ -563,7 +460,6 @@ function Compare() {
                             <tr key={field}>
                               <td
                                 style={fieldCellStyle}
-                                onClick={() => handleCellClick(team, field)}
                                 onDoubleClick={() => handleFieldDoubleClick(field)}
                                 title="Double-click to pin this field to the top"
                               >
@@ -596,7 +492,6 @@ function Compare() {
                             <tr key={field}>
                               <td
                                 style={fieldCellStyle}
-                                onClick={() => handleCellClick(team, field)}
                                 onDoubleClick={() => handleFieldDoubleClick(field)}
                                 title="Double-click to pin this field to the top"
                               >
@@ -617,7 +512,6 @@ function Compare() {
                             <tr key={field}>
                               <td
                                 style={fieldCellStyle}
-                                onClick={() => handleCellClick(team, field)}
                                 onDoubleClick={() => handleFieldDoubleClick(field)}
                                 title="Double-click to pin this field to the top"
                               >
@@ -635,7 +529,6 @@ function Compare() {
                           <tr key={field}>
                             <td
                               style={fieldCellStyle}
-                              onClick={() => handleCellClick(team, field)}
                               onDoubleClick={() => handleFieldDoubleClick(field)}
                               title="Double-click to pin this field to the top"
                             >
