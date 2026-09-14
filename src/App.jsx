@@ -1,6 +1,7 @@
 // src/App.jsx
 import './App.css'
 import './styles/tables.css'
+import './styles/role-pages.css'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Layout from './pages/TopBar' // acts as layout wrapper
 import TeamData from './pages/TeamData'
@@ -17,6 +18,8 @@ import Upload from './pages/Upload'
 import TeamAnalysis from './pages/TeamAnalysis'
 import AutoPaths from './pages/AutoPaths'
 import PrescoutingData from './pages/PrescoutingData'
+import Defense from './pages/Defense'
+import ShooterFerry from './pages/ShooterFerry'
 
 function App() {
   return (
@@ -31,6 +34,8 @@ function App() {
           <Route path="/statbotics-data" element={<StatboticsData />} /> 
           <Route path="/TBA-data" element={<TBAData />} /> 
           <Route path="/compare" element={<Compare />} />
+          <Route path="/defense" element={<Defense />} />
+          <Route path="/shooter" element={<ShooterFerry />} />
           <Route path="/team-analysis" element={<TeamAnalysis />} />
           <Route path="/match-strategy" element={<MatchStrategy />} />
           <Route path="/rankings" element={<Rankings />} />

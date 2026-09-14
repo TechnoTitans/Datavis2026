@@ -11,6 +11,8 @@ const navItems = [
   { to: '/prescouting-data', label: 'Pre', title: 'Prescouting Data' },
   { to: '/TBA-data', label: 'TBA', title: 'TBA Data' },
   { to: '/compare', label: 'Compare', title: 'Compare' },
+  { to: '/defense', label: 'Defense', title: 'Defense' },
+  { to: '/shooter', label: 'Shoot', title: 'Shooter / Ferrying' },
   { to: '/team-analysis', label: 'Analysis', title: 'Team Analysis' },
   { to: '/auto-paths', label: 'Autos', title: 'Auto Paths' },
   { to: '/picklist', label: 'Picklist', title: 'Picklist' },
