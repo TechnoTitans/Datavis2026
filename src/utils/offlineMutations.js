@@ -94,20 +94,18 @@ export const approveUnconfirmedData = async (unconfirmedItem) => {
         'Auto Path': unconfirmedItem['Auto Path'],
         'Cycle Count': unconfirmedItem['Cycle Count'],
         'Tier': unconfirmedItem['Tier'],
-        'Pin Rating': unconfirmedItem['Pin Rating'],
-        'Steal Rating': unconfirmedItem['Steal Rating'],
-        'Block Rating': unconfirmedItem['Block Rating'],
-        'Ram Rating': unconfirmedItem['Ram Rating'],
-        'AntiPin Rating': unconfirmedItem['AntiPin Rating'],
-        'AntiSteal Rating': unconfirmedItem['AntiSteal Rating'],
-        'AntiBlock Rating': unconfirmedItem['AntiBlock Rating'],
-        'AntiRam Rating': unconfirmedItem['AntiRam Rating'],
+        'Pins': unconfirmedItem['Pins'],
+        'Steals': unconfirmedItem['Steals'],
+        'Blocks': unconfirmedItem['Blocks'],
+        'Rams': unconfirmedItem['Rams'],
+        'Defense Rating': unconfirmedItem['Defense Rating'],
         'Endgame Climb': unconfirmedItem['Endgame Climb'],
         'Bump?': unconfirmedItem['Bump?'],
         'Trench?': unconfirmedItem['Trench?'],
         'Penalties?': unconfirmedItem['Penalties?'],
         'Notes': unconfirmedItem['Notes'],
         'Use Data': unconfirmedItem['Use Data'],
+        'Broke Down?': unconfirmedItem['Broke Down?']
       }
 
       console.log("APPROVING MATCH DATA:", matchData)

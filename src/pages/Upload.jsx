@@ -197,7 +197,6 @@ function Upload() {
 
       const teamNumber = parseInt(lines[0])
       const matchNumber = parseInt(lines[1])
-
       
       const data = {
         'Scouting ID': `GACMP_${teamNumber}_${matchNumber}`,
@@ -210,15 +209,13 @@ function Upload() {
         'Steal Rating': parseInt(lines[8]),
         'Block Rating': parseInt(lines[9]),
         'Ram Rating': parseInt(lines[10]),
-        'AntiPin Rating': parseInt(lines[11]),
-        'AntiSteal Rating': parseInt(lines[12]),
-        'AntiBlock Rating': parseInt(lines[13]),
-        'AntiRam Rating': parseInt(lines[14]),
-        'Endgame Climb': lines[15],
-        'Bump?': lines[16] === 'true',
-        'Trench?': lines[17] === 'true',
-        'Penalties?': lines[18] === 'true',
-        'Notes': lines[19],
+        'Defense Rating': parseInt(lines[11]),
+        'Endgame Climb': lines[12],
+        'Bump?': lines[13] === 'true',
+        'Trench?': lines[14] === 'true',
+        'Penalties?': lines[15] === 'true',
+        'Broke Down?': lines[16] === 'true',
+        'Notes': lines[17],
         'Use Data': true,
         _teamNumber: teamNumber,
         _matchNumber: matchNumber,
