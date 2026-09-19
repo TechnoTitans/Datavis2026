@@ -110,6 +110,9 @@ export const useTeamSummary = (matchRows, useMaxValues) => {
           continue
         }
         
+        // Remove shotmap fields
+        if (col === 'Shot Coordinates') continue
+        
         // Handle other columns
         summaryResult[col] = calculateOtherColumnSummary(teamRows, col)
       }

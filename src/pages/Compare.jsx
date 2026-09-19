@@ -5,12 +5,13 @@ import { useSelectedTeams, useLocalStorage } from '../hooks/useLocalStorage'
 import { useTeamSummary } from '../hooks/useTeamSummary'
 import { useCompareData } from '../hooks/useCompareData'
 import { EVENT_KEY } from '../constants/scoring'
+import SummaryChart from '../components/SummaryChart'
 
 const SOURCE_OPTIONS = [
   { value: 'combined', label: 'Combined (Scouter + TBA)' },
   { value: 'scouter', label: 'Scouter Only' },
   { value: 'tba', label: 'TBA Only' },
-]
+] 
 
 const COMPARE_STAT_FIELDS = [
   'Pin',
@@ -25,6 +26,8 @@ const COMPARE_STAT_FIELDS = [
   'Bump',
   'Trench',
   'Broke Down',
+  'Cycle Count',
+  'Tier',
 ]
 
 const RATING_FIELDS = [
@@ -229,6 +232,8 @@ function Compare() {
   })
 
   const summary = useTeamSummary(matchRows, useMaxValues)
+  
+  console.log("MATCH ROW:", JSON.stringify(matchRows[0], null, 2))
 
   useEffect(() => {
     if (!COMPARE_STAT_FIELDS.length) {

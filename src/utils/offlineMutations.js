@@ -63,6 +63,8 @@ export const updateMatchUseData = async ({ scoutingId, value }) => {
 }
 
 export const insertUnconfirmedData = async (row) => {
+  console.log("INSERTING UNCONFIRMED:", row)
+
   const scoutingId = row?.['Scouting ID']
   return await runOrQueue(
     {
@@ -90,24 +92,23 @@ export const approveUnconfirmedData = async (unconfirmedItem) => {
         'Scouter Name': unconfirmedItem['Scouter Name'],
         'Position': unconfirmedItem['Position'],
         'Auto Path': unconfirmedItem['Auto Path'],
-        'Shot While Moving': unconfirmedItem['Shot While Moving'],
-        'Shot Coordinates': unconfirmedItem['Shot Coordinates'],
-        'Pin Rating': unconfirmedItem['Pin Rating'],
-        'Steal Rating': unconfirmedItem['Steal Rating'],
-        'Block Rating': unconfirmedItem['Block Rating'],
-        'Ram Rating': unconfirmedItem['Ram Rating'],
-        'AntiPin Rating': unconfirmedItem['AntiPin Rating'],
-        'AntiSteal Rating': unconfirmedItem['AntiSteal Rating'],
-        'AntiBlock Rating': unconfirmedItem['AntiBlock Rating'],
-        'AntiRam Rating': unconfirmedItem['AntiRam Rating'],
+        'Cycle Count': unconfirmedItem['Cycle Count'],
+        'Tier': unconfirmedItem['Tier'],
+        'Pins': unconfirmedItem['Pins'],
+        'Steals': unconfirmedItem['Steals'],
+        'Blocks': unconfirmedItem['Blocks'],
+        'Rams': unconfirmedItem['Rams'],
+        'Defense Rating': unconfirmedItem['Defense Rating'],
         'Endgame Climb': unconfirmedItem['Endgame Climb'],
         'Bump?': unconfirmedItem['Bump?'],
         'Trench?': unconfirmedItem['Trench?'],
         'Penalties?': unconfirmedItem['Penalties?'],
         'Notes': unconfirmedItem['Notes'],
         'Use Data': unconfirmedItem['Use Data'],
+        'Broke Down?': unconfirmedItem['Broke Down?']
       }
 
+      console.log("APPROVING MATCH DATA:", matchData)
       const insertResult = await supabase.from('match_data').insert([matchData])
       if (insertResult.error) return insertResult
 

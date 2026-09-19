@@ -59,6 +59,7 @@ export const useTeamData = (selectedTeams = [], useDataOnly = false) => {
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
           ])
           data = result.data
+          console.log("MATCH DATA FROM SUPABASE:", data)
         } catch (err) {
           console.warn('Supabase fetch failed or timed out, falling back to CSV:', err)
         }
@@ -74,7 +75,16 @@ export const useTeamData = (selectedTeams = [], useDataOnly = false) => {
             if (useDataOnly && row["Use Data"] !== 'true' && row["Use Data"] !== true) {
               continue
             }
-            filteredRows.push({ ...row, team: Number(teamNumber) })
+            const { 
+              'Shot Coordinates': _shotCoordinates,
+              'Shot While Moving': _shotWhileMoving,
+              ...cleanRow
+            } = row
+
+            filteredRows.push({ 
+              ...cleanRow, 
+              team: Number(teamNumber) 
+            })
           }
         }
         // Sort by team, then by match number

@@ -194,34 +194,41 @@ function Upload() {
   const parseQRData = (qrText) => {
     try {
       const lines = qrText.split('\n').filter(line => line.trim() !== '')
+
+      const teamNumber = parseInt(lines[0])
+      const matchNumber = parseInt(lines[1])
       
       const data = {
-        'Scouting ID': `${lines[0]}_${lines[1]}_${lines[2]}`,
-        'Scouter Name': lines[3],
-        'Position': lines[4],
-        'Auto Path': lines[5] === 'null' ? null : lines[5],
-        'Shot While Moving': lines[6] === 'true',
-        'Shot Coordinates': lines[7],
-        'Pin Rating': parseInt(lines[8]),
-        'Steal Rating': parseInt(lines[9]),
-        'Block Rating': parseInt(lines[10]),
-        'Ram Rating': parseInt(lines[11]),
-        'AntiPin Rating': parseInt(lines[12]),
-        'AntiSteal Rating': parseInt(lines[13]),
-        'AntiBlock Rating': parseInt(lines[14]),
-        'AntiRam Rating': parseInt(lines[15]),
-        'Endgame Climb': lines[16],
-        'Bump?': lines[17] === 'true',
-        'Trench?': lines[18] === 'true',
-        'Penalties?': lines[19] === 'true',
-        'Notes': lines[20],
+        'Scouting ID': `GACMP_${teamNumber}_${matchNumber}`,
+        'Scouter Name': lines[2],
+        'Position': lines[3],
+        'Auto Path': lines[4] === 'null' ? null : lines[4],
+        'Cycle Count': parseInt(lines[5]),
+        'Tier': parseInt(lines[6]),
+        'Pins': parseInt(lines[7]),
+        'Steals': parseInt(lines[8]),
+        'Blocks': parseInt(lines[9]),
+        'Rams': parseInt(lines[10]),
+        'Defense Rating': parseInt(lines[11]),
+        'Endgame Climb': lines[12],
+        'Bump?': lines[13] === 'true',
+        'Trench?': lines[14] === 'true',
+        'Penalties?': lines[15] === 'true',
+        'Broke Down?': lines[16] === 'true',
+        'Notes': lines[17],
         'Use Data': true,
-        _teamNumber: parseInt(lines[1]),
-        _matchNumber: parseInt(lines[2])
+        _teamNumber: teamNumber,
+        _matchNumber: matchNumber,
       }
+    
+      console.log("Parsed QR:", data)
+      
 
       setParsedData(data)
       setMessage('QR code parsed successfully!')
+
+      return data
+
     } catch (error) {
       console.error('Error parsing QR data:', error)
       setMessage('Error parsing QR code: ' + error.message)
