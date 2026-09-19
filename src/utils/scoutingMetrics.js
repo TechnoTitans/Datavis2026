@@ -11,6 +11,16 @@ export const DEFENSE_ACTIONS = [
 
 export const DEFENSE_RATING_COLUMNS = ['Defense Rating', 'Defense Ability', 'Defense']
 
+// Column names to look for the shooting tier in (add yours here if it's different)
+export const TIER_COLUMNS = ['Tier', 'Shooter Tier', 'Shooting Tier', 'Shot Tier', 'Fuel Tier']
+
+// Point range for each tier
+export const TIER_RANGES = {
+  1: [0, 20],
+  2: [21, 40],
+  3: [41, 60],
+}
+
 const EMPTY_NOTE_VALUES = new Set(['', 'null', 'true', 'false', 'n/a', 'na', 'none', '-', 'nil'])
 const EMPTY_DEFENSE_VALUES = new Set([
   '',
@@ -64,6 +74,48 @@ export const formatNumber = (value, digits = 2) => {
   if (value == null || !Number.isFinite(value)) return '—'
   const fixed = Number(value.toFixed(digits))
   return Number.isInteger(fixed) ? String(fixed) : fixed.toFixed(digits)
+}
+
+// { low, high } -> "77.5 – 135"
+export const formatRange = (range, digits = 1) => {
+  if (!range) return '—'
+  return `${formatNumber(range.low, digits)} – ${formatNumber(range.high, digits)}`
+}
+
+// Reads a tier (1, 2, or 3) from a row. Accepts "2", "T2", "Tier 2".
+export const parseTier = (row) => {
+  for (const column of TIER_COLUMNS) {
+    const value = row?.[column]
+    if (value == null) continue
+    const match = String(value).match(/^\s*(?:tier|t)?\s*([123])\s*$/i)
+    if (match) return Number(match[1])
+  }
+  return null
+}
+
+// cycles 5, tier 2 -> { low: 105, high: 200 }
+export const optimisticRange = (cycleCount, tier) => {
+  const range = TIER_RANGES[Number(tier)]
+  const cycles = Number(cycleCount)
+  if (!range || cycleCount == null || !Number.isFinite(cycles)) return null
+  return { low: cycles * range[0], high: cycles * range[1] }
+}
+
+// tier 2 -> { low: 21, high: 40 }
+export const tierRange = (tier) => {
+  const range = TIER_RANGES[Number(tier)]
+  return range ? { low: range[0], high: range[1] } : null
+}
+
+// Averages lows and highs separately. Rows with no valid range are skipped.
+// 50-70 and 105-200 -> 77.5 - 135
+export const averageRange = (ranges) => {
+  const valid = (ranges || []).filter(Boolean)
+  if (valid.length === 0) return null
+  return {
+    low: valid.reduce((sum, r) => sum + r.low, 0) / valid.length,
+    high: valid.reduce((sum, r) => sum + r.high, 0) / valid.length,
+  }
 }
 
 export const formatMatchLabel = (row) => {
@@ -246,6 +298,11 @@ export const parseCycleAndFuel = (row) => {
     isTruthyFlag(row?.['Shot While Moving']),
   )
 
+  // Tier-based values: optimistic score = cycles x tier point range
+  const tier = parseTier(row)
+  const range = optimisticRange(cycleCount, tier)
+  const fuelRange = tierRange(tier)
+
   let optimistic = null
   let optimisticMode = null
   if (cycleCount != null && fuelCount != null && independentFuel) {
@@ -269,6 +326,9 @@ export const parseCycleAndFuel = (row) => {
     fuelSource,
     independentFuel,
     shoots,
+    tier,
+    optimisticRange: range,
+    fuelRange,
     optimistic,
     optimisticMode,
   }
@@ -333,6 +393,11 @@ export const summarizeShooter = (teamRows, qualRows = [], keyword = 'ferry', tea
   const fuelAvg = mean(parsedRows.map(entry => entry.metrics.fuelCount))
   const independentFuel = parsedRows.some(entry => entry.metrics.independentFuel && entry.metrics.fuelCount != null)
 
+  // Average of the per-row ranges (lows and highs averaged separately)
+  const avgOptimisticRange = averageRange(parsedRows.map(entry => entry.metrics.optimisticRange))
+  const tierAvg = mean(parsedRows.map(entry => entry.metrics.tier))
+  const fuelRange = averageRange(parsedRows.map(entry => entry.metrics.fuelRange))
+
   let optimistic = null
   let optimisticMode = null
   if (cycleAvg != null && fuelAvg != null && independentFuel) {
@@ -362,6 +427,9 @@ export const summarizeShooter = (teamRows, qualRows = [], keyword = 'ferry', tea
     cycleAvg,
     fuelAvg,
     independentFuel,
+    tierAvg,
+    fuelRange,
+    optimisticRange: avgOptimisticRange,
     optimistic,
     optimisticMode,
     locationMapOnly: parsedRows.some(entry => entry.metrics.paintedLocationMap) && cycleAvg == null,

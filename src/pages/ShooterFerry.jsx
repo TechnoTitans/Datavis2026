@@ -7,6 +7,7 @@ import { useSelectedTeams } from '../hooks/useLocalStorage'
 import {
   extractKeywordLinesForTeam,
   formatNumber,
+  formatRange,
   mergeTeamLists,
   orderedTeamIds,
   qualRowHasTeam,
@@ -42,16 +43,10 @@ function KeywordText({ text, keyword }) {
 }
 
 function OptimisticCaption({ summary }) {
-  if (summary.optimistic == null) {
-    return 'No cycle or fuel values recorded yet.'
+  if (!summary.optimisticRange) {
+    return 'No cycle or tier values recorded yet.'
   }
-  if (summary.optimisticMode === 'cycles_times_fuel') {
-    return `Optimistic score = avg cycles × avg fuel = ${formatNumber(summary.cycleAvg)} × ${formatNumber(summary.fuelAvg)}.`
-  }
-  if (summary.independentFuel) {
-    return `Optimistic score uses recorded fuel at 1 point per fuel.`
-  }
-  return 'Cycle and fuel come from the same shot records, so optimistic score is expected hub points (1 fuel = 1 point) instead of multiplying the two.'
+  return 'Optimistic score = cycles × tier point range (T1: 0–20, T2: 21–40, T3: 41–60), averaged across matches.'
 }
 
 function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qualLoading }) {
@@ -87,12 +82,13 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
                   <p className="stat-value">{formatNumber(summary.cycleAvg)}</p>
                 </div>
                 <div className="stat-pill">
-                  <p className="stat-kicker">Avg fuel</p>
-                  <p className="stat-value">{formatNumber(summary.fuelAvg)}</p>
+                  <p className="stat-kicker">Avg tier</p>
+                  <p className="stat-value">{formatNumber(summary.tierAvg)}</p>
+                  <p className="stat-kicker">Fuel range: {formatRange(summary.fuelRange)}</p>
                 </div>
                 <div className="stat-pill stat-pill-accent">
-                  <p className="stat-kicker">Optimistic score</p>
-                  <p className="stat-value">{formatNumber(summary.optimistic)}</p>
+                  <p className="stat-kicker">Avg optimistic score</p>
+                  <p className="stat-value">{formatRange(summary.optimisticRange)}</p>
                 </div>
               </div>
               <p className="stat-hint"><OptimisticCaption summary={summary} /></p>
@@ -107,7 +103,8 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
                       <tr>
                         <th className="sticky-column">Match</th>
                         <th>Cycles</th>
-                        <th>Fuel</th>
+                        <th>Tier</th>
+                        <th>Fuel range</th>
                         <th>Optimistic</th>
                         <th>Notes</th>
                       </tr>
@@ -117,8 +114,9 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
                         <tr key={entry.row['Scouting ID'] || `${team}-shot-${idx}`}>
                           <td className="sticky-column">{entry.matchLabel}</td>
                           <td>{formatNumber(entry.metrics.cycleCount, 0)}</td>
-                          <td>{formatNumber(entry.metrics.fuelCount, 0)}</td>
-                          <td>{formatNumber(entry.metrics.optimistic)}</td>
+                          <td>{entry.metrics.tier ?? '—'}</td>
+                          <td>{formatRange(entry.metrics.fuelRange)}</td>
+                          <td>{formatRange(entry.metrics.optimisticRange)}</td>
                           <td className="wrap-cell">
                             {entry.notes
                               ? <KeywordText text={entry.notes} keyword={keyword} />
@@ -248,8 +246,9 @@ function ShooterFerry() {
     <div className="role-page">
       <h1>Shooter / Ferrying</h1>
       <p className="role-lead">
-        Shooting comes from scouted cycles and fuel. Ferrying is keyword-matched from scouting comments and qual notes.
-        Optimistic score multiplies average cycles by average fuel when those are independent values.
+        Shooting comes from scouted cycles and tier. Ferrying is keyword-matched from scouting comments and qual notes.
+        Optimistic score multiplies cycles by the point range of the shooting tier (T1: 0–20, T2: 21–40, T3: 41–60),
+        averaged across matches.
       </p>
 
       <TeamSelector
