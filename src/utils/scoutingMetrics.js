@@ -1,20 +1,12 @@
 import { parseMatchNumber, parseTeamNumber } from './helpers.js'
+import { CYCLE_COLUMNS, DEFENSE_ACTIONS, DEFENSE_RATING_COLUMNS } from '../constants/matchSchema.js'
+
+export { DEFENSE_ACTIONS, DEFENSE_RATING_COLUMNS } from '../constants/matchSchema.js'
 
 export const POINTS_PER_FUEL = 1
 
-export const DEFENSE_ACTIONS = [
-  { key: 'pin', label: 'Pin', columns: ['Pins', 'Pin Rating', 'Pin'] },
-  { key: 'ram', label: 'Ram', columns: ['Rams', 'Ram Rating', 'Ram'] },
-  { key: 'block', label: 'Block', columns: ['Blocks', 'Block Rating', 'Block'] },
-  { key: 'steal', label: 'Steal', columns: ['Steals', 'Steal Rating', 'Steal'] },
-]
-
-export const DEFENSE_RATING_COLUMNS = ['Defense Rating', 'Defense Ability', 'Defense']
-
-// Column names to look for the shooting tier in (add yours here if it's different)
 export const TIER_COLUMNS = ['Tier', 'Shooter Tier', 'Shooting Tier', 'Shot Tier', 'Fuel Tier']
 
-// Point range for each tier
 export const TIER_RANGES = {
   1: [0, 20],
   2: [21, 40],
@@ -221,8 +213,8 @@ export const splitKeywordMatches = (text, keyword) => {
 }
 
 export const getShotRaw = (row) => {
-  const candidates = [row?.['Shot Coordinates'], row?.['Cycle Count'], row?.cycleCount, row?.shots]
-  for (const candidate of candidates) {
+  for (const column of CYCLE_COLUMNS) {
+    const candidate = row?.[column]
     if (candidate == null) continue
     const text = String(candidate).trim()
     if (!text || text.toLowerCase() === 'null') continue

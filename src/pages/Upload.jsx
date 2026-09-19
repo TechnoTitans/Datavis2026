@@ -4,6 +4,8 @@ import { canEditDatabase } from '../utils/permissions'
 import QrScanner from 'qr-scanner'
 import { approveUnconfirmedData, insertUnconfirmedData, rejectUnconfirmedData } from '../utils/offlineMutations'
 import { scannedDataToCSV, downloadAllData } from '../utils/csvHandler'
+import { parseMatchQr, stripMatchMeta } from '../utils/matchRecord'
+import { MATCH_FIELDS } from '../constants/matchSchema'
 import { toast } from 'sonner'
 
 function Upload() {
@@ -193,42 +195,11 @@ function Upload() {
 
   const parseQRData = (qrText) => {
     try {
-      const lines = qrText.split('\n').filter(line => line.trim() !== '')
-
-      const teamNumber = parseInt(lines[0])
-      const matchNumber = parseInt(lines[1])
-      
-      const data = {
-        'Scouting ID': `GACMP_${teamNumber}_${matchNumber}`,
-        'Scouter Name': lines[2],
-        'Position': lines[3],
-        'Auto Path': lines[4] === 'null' ? null : lines[4],
-        'Cycle Count': parseInt(lines[5]),
-        'Tier': parseInt(lines[6]),
-        'Pins': parseInt(lines[7]),
-        'Steals': parseInt(lines[8]),
-        'Blocks': parseInt(lines[9]),
-        'Rams': parseInt(lines[10]),
-        'Defense Rating': parseInt(lines[11]),
-        'Endgame Climb': lines[12],
-        'Bump?': lines[13] === 'true',
-        'Trench?': lines[14] === 'true',
-        'Penalties?': lines[15] === 'true',
-        'Broke Down?': lines[16] === 'true',
-        'Notes': lines[17],
-        'Use Data': true,
-        _teamNumber: teamNumber,
-        _matchNumber: matchNumber,
-      }
-    
-      console.log("Parsed QR:", data)
-      
-
+      const data = parseMatchQr(qrText)
+      console.log('Parsed QR:', data)
       setParsedData(data)
       setMessage('QR code parsed successfully!')
-
       return data
-
     } catch (error) {
       console.error('Error parsing QR data:', error)
       setMessage('Error parsing QR code: ' + error.message)
@@ -244,7 +215,7 @@ function Upload() {
     }
 
     try {
-      const { _teamNumber, _matchNumber, ...dataToInsert } = parsedData
+      const dataToInsert = stripMatchMeta(parsedData)
 
       const result = await insertUnconfirmedData(dataToInsert)
       if (result?.error) throw result.error
@@ -403,9 +374,12 @@ function Upload() {
             <h4>Parsed QR Data:</h4>
             <p><strong>Team:</strong> {parsedData._teamNumber}</p>
             <p><strong>Match:</strong> {parsedData._matchNumber}</p>
-            <p><strong>Scouter:</strong> {parsedData['Scouter Name']}</p>
-            <p><strong>Position:</strong> {parsedData['Position']}</p>
             <p><strong>Scouting ID:</strong> {parsedData['Scouting ID']}</p>
+            {MATCH_FIELDS.map(field => (
+              <p key={field.key}>
+                <strong>{field.key}:</strong> {parsedData[field.key] == null ? 'null' : String(parsedData[field.key])}
+              </p>
+            ))}
             
             <button 
               onClick={uploadToUnconfirmed}

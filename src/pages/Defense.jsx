@@ -96,28 +96,27 @@ function ScoutingDefenseCard({ team, rows }) {
                 <thead>
                   <tr>
                     <th className="sticky-column">Match</th>
-                    <th>Pin</th>
-                    <th>Ram</th>
-                    <th>Block</th>
-                    <th>Steal</th>
+                    {DEFENSE_ACTIONS.map(action => (
+                      <th key={action.key}>{action.label}</th>
+                    ))}
                     <th>General</th>
                     <th>Notes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, idx) => {
-                    const pin = getDefenseActionValue(row, DEFENSE_ACTIONS[0])
-                    const ram = getDefenseActionValue(row, DEFENSE_ACTIONS[1])
-                    const block = getDefenseActionValue(row, DEFENSE_ACTIONS[2])
-                    const steal = getDefenseActionValue(row, DEFENSE_ACTIONS[3])
                     const general = getDefenseRatingValue(row)
                     return (
                       <tr key={row['Scouting ID'] || `${team}-${idx}`}>
                         <td className="sticky-column">{formatMatchLabel(row)}</td>
-                        <td className={pin > 0 ? 'rating-hot' : ''}>{formatNumber(pin, 0)}</td>
-                        <td className={ram > 0 ? 'rating-hot' : ''}>{formatNumber(ram, 0)}</td>
-                        <td className={block > 0 ? 'rating-hot' : ''}>{formatNumber(block, 0)}</td>
-                        <td className={steal > 0 ? 'rating-hot' : ''}>{formatNumber(steal, 0)}</td>
+                        {DEFENSE_ACTIONS.map(action => {
+                          const value = getDefenseActionValue(row, action)
+                          return (
+                            <td key={action.key} className={value > 0 ? 'rating-hot' : ''}>
+                              {formatNumber(value, 0)}
+                            </td>
+                          )
+                        })}
                         <td>{formatNumber(general, 0)}</td>
                         <td className="wrap-cell">{noteText(row.Notes) || '—'}</td>
                       </tr>

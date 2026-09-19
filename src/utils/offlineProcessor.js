@@ -1,5 +1,6 @@
 import { deleteOp, listPendingOps, updateOp } from './offlineQueue'
 import { supabase } from '../supabaseClient'
+import { pickMatchRecord } from './matchRecord'
 
 const isLikelyNetworkError = (err) => {
   if (!err) return false
@@ -42,33 +43,7 @@ const processOne = async (op) => {
 
       await supabase.from('match_data').delete().eq('"Scouting ID"', scoutingId)
 
-      const matchData = {
-        'Scouting ID': unconfirmedItem['Scouting ID'],
-        'Scouter Name': unconfirmedItem['Scouter Name'],
-        'Position': unconfirmedItem['Position'],
-        'Auto Path': unconfirmedItem['Auto Path'],
-        'L4 Count': unconfirmedItem['L4 Count'],
-        'L4 Missed Count': unconfirmedItem['L4 Missed Count'],
-        'L3 Count': unconfirmedItem['L3 Count'],
-        'L3 Missed Count': unconfirmedItem['L3 Missed Count'],
-        'L2 Count': unconfirmedItem['L2 Count'],
-        'L2 Missed Count': unconfirmedItem['L2 Missed Count'],
-        'L1 Count': unconfirmedItem['L1 Count'],
-        'L1 Missed Count': unconfirmedItem['L1 Missed Count'],
-        'Processor Count': unconfirmedItem['Processor Count'],
-        'Processor Missed Count': unconfirmedItem['Processor Missed Count'],
-        'Net Count': unconfirmedItem['Net Count'],
-        'Net Missed Count': unconfirmedItem['Net Missed Count'],
-        'Endgame Position': unconfirmedItem['Endgame Position'],
-        'Is Ground Coral?': unconfirmedItem['Is Ground Coral?'],
-        'Is Ground Algae?': unconfirmedItem['Is Ground Algae?'],
-        'Driver Quality': unconfirmedItem['Driver Quality'],
-        'Defense Ability': unconfirmedItem['Defense Ability'],
-        'Mechanical Reliability': unconfirmedItem['Mechanical Reliability'],
-        'Algae Descorability': unconfirmedItem['Algae Descorability'],
-        'Notes': unconfirmedItem['Notes'],
-        'Use Data': true,
-      }
+      const matchData = pickMatchRecord({ ...unconfirmedItem, 'Use Data': true })
 
       const insertResult = await supabase.from('match_data').insert([matchData])
       if (insertResult.error) return insertResult

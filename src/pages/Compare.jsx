@@ -5,41 +5,18 @@ import { useSelectedTeams, useLocalStorage } from '../hooks/useLocalStorage'
 import { useTeamSummary } from '../hooks/useTeamSummary'
 import { useCompareData } from '../hooks/useCompareData'
 import { EVENT_KEY } from '../constants/scoring'
-import SummaryChart from '../components/SummaryChart'
+import { COMPARE_FIELDS } from '../constants/matchSchema'
+import { getRowNumber } from '../utils/scoutingMetrics'
 
 const SOURCE_OPTIONS = [
   { value: 'combined', label: 'Combined (Scouter + TBA)' },
   { value: 'scouter', label: 'Scouter Only' },
   { value: 'tba', label: 'TBA Only' },
-] 
-
-const COMPARE_STAT_FIELDS = [
-  'Pin',
-  'Ram',
-  'Block',
-  'Steal',
-  'Anti Pin',
-  'Anti Ram',
-  'Anti Block',
-  'Anti Steal',
-  'Penalties',
-  'Bump',
-  'Trench',
-  'Broke Down',
-  'Cycle Count',
-  'Tier',
 ]
 
-const RATING_FIELDS = [
-  'Pin',
-  'Ram',
-  'Block',
-  'Steal',
-  'Anti Pin',
-  'Anti Ram',
-  'Anti Block',
-  'Anti Steal',
-]
+const COMPARE_STAT_FIELDS = COMPARE_FIELDS.map(field => field.id)
+
+const getCompareField = (fieldId) => COMPARE_FIELDS.find(field => field.id === fieldId)
 
 const getSummaryNumericValue = (teamSummary, fieldName) => {
   const metric = teamSummary?.[fieldName]
@@ -81,71 +58,52 @@ const fetchTeamOPR = async (teamNumber) => {
   }
 }
 
-const calculateRatingStats = (teamRows, ratingFieldName) => {
-  const normalizedFieldName = ratingFieldName.replace(/\s+/g, '')
-  const dbColumnName = `${normalizedFieldName} Rating`
+const calculateNumberStats = (teamRows, fieldSpec) => {
+  if (!fieldSpec) return null
   const values = teamRows
-    .map(r => r[dbColumnName])
-    .filter(v => typeof v === 'number' && !isNaN(v))
+    .map(row => getRowNumber(row, [fieldSpec.key, ...fieldSpec.aliases]))
+    .filter(value => value != null)
 
   if (values.length === 0) return null
 
-  const avg = values.reduce((a, b) => a + b, 0) / values.length
-  if (avg === 0) return null
-
-  const max = Math.max(...values)
-  const min = Math.min(...values)
-
+  const avg = values.reduce((sum, value) => sum + value, 0) / values.length
   return {
     type: 'rating',
     average: avg.toFixed(2),
-    max: max,
-    min: min,
+    max: Math.max(...values),
+    min: Math.min(...values),
     count: values.length,
   }
 }
 
-const calculateBooleanPercentage = (teamRows, fieldName) => {
-  let dbColumnName
-  if (fieldName === 'Broke Down') {
-    dbColumnName = 'Broke Down?'
-  } else if (fieldName === 'Penalties') {
-    dbColumnName = 'Penalties?'
-  } else {
-    dbColumnName = `${fieldName}?`
-  }
-
+const calculateBooleanPercentage = (teamRows, fieldSpec) => {
+  if (!fieldSpec) return null
   const values = teamRows
-    .map(r => r[dbColumnName])
-    .filter(v => v !== null && v !== undefined)
+    .map(row => row?.[fieldSpec.key] ?? row?.[fieldSpec.aliases[0]])
+    .filter(value => value !== null && value !== undefined)
 
   if (values.length === 0) return null
 
-  const trueCount = values.filter(v => v === true).length
+  const trueCount = values.filter(value => value === true || value === 'true' || value === 1 || value === '1').length
   if (trueCount === 0) return null
-
-  const percentage = ((trueCount / values.length) * 100).toFixed(1)
 
   return {
     type: 'boolean',
     trueCount,
     totalCount: values.length,
-    percentage,
+    percentage: ((trueCount / values.length) * 100).toFixed(1),
   }
 }
 
 const getComparisonValue = (teamRows, teamSummary, field) => {
-  const isRatingField = RATING_FIELDS.includes(field)
-  const booleanFields = ['Penalties', 'Bump', 'Trench', 'Broke Down']
-  const isBooleanField = booleanFields.includes(field)
-
-  if (isRatingField) {
-    const stats = calculateRatingStats(teamRows, field)
-    return stats ? parseFloat(stats.average) : null
-  }
-  if (isBooleanField) {
-    const stats = calculateBooleanPercentage(teamRows, field)
+  const fieldSpec = getCompareField(field)
+  if (fieldSpec?.type === 'bool') {
+    const stats = calculateBooleanPercentage(teamRows, fieldSpec)
     return stats ? parseFloat(stats.percentage) : null
+  }
+  if (fieldSpec) {
+    const stats = calculateNumberStats(teamRows, fieldSpec)
+    return stats ? parseFloat(stats.average) : null
   }
   return getSummaryNumericValue(teamSummary, field)
 }
@@ -427,10 +385,7 @@ function Compare() {
                     </thead>
                     <tbody>
                       {sortedFields.map(field => {
-                        const isRatingField = RATING_FIELDS.includes(field)
-                        const booleanFields = ['Penalties', 'Bump', 'Trench', 'Broke Down']
-                        const isBooleanField = booleanFields.includes(field)
-
+                        const fieldSpec = getCompareField(field)
                         const rankLabel = fieldColorMaps[field]?.[team]
                         const rankStyle = rankLabel ? RANK_COLOR_STYLES[rankLabel] : undefined
 
@@ -439,28 +394,8 @@ function Compare() {
                           ? { fontWeight: 700, color: '#6366f1', cursor: 'pointer', userSelect: 'none' }
                           : { cursor: 'pointer', userSelect: 'none' }
 
-                        if (isRatingField) {
-                          const ratingStats = calculateRatingStats(teamRows, field)
-                          if (!ratingStats) return null
-                          return (
-                            <tr key={field}>
-                              <td
-                                style={fieldCellStyle}
-                                onDoubleClick={() => handleFieldDoubleClick(field)}
-                                title="Double-click to pin this field to the top"
-                              >
-                                {isPinned ? ' ' : ''}{field}
-                              </td>
-                              <td style={rankStyle || {}}>{ratingStats.average}</td>
-                              <td>{ratingStats.min}</td>
-                              <td>{ratingStats.max}</td>
-                              <td>Rating ({ratingStats.count} matches)</td>
-                            </tr>
-                          )
-                        }
-
-                        if (isBooleanField) {
-                          const booleanStats = calculateBooleanPercentage(teamRows, field)
+                        if (fieldSpec?.type === 'bool') {
+                          const booleanStats = calculateBooleanPercentage(teamRows, fieldSpec)
                           return (
                             <tr key={field}>
                               <td
@@ -480,6 +415,26 @@ function Compare() {
                                   ? `${booleanStats.trueCount} / ${booleanStats.totalCount} matches`
                                   : '—'}
                               </td>
+                            </tr>
+                          )
+                        }
+
+                        if (fieldSpec) {
+                          const ratingStats = calculateNumberStats(teamRows, fieldSpec)
+                          if (!ratingStats) return null
+                          return (
+                            <tr key={field}>
+                              <td
+                                style={fieldCellStyle}
+                                onDoubleClick={() => handleFieldDoubleClick(field)}
+                                title="Double-click to pin this field to the top"
+                              >
+                                {isPinned ? ' ' : ''}{field}
+                              </td>
+                              <td style={rankStyle || {}}>{ratingStats.average}</td>
+                              <td>{ratingStats.min}</td>
+                              <td>{ratingStats.max}</td>
+                              <td>Rating ({ratingStats.count} matches)</td>
                             </tr>
                           )
                         }

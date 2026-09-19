@@ -1,3 +1,5 @@
+import { getCsvHeaders, coerceCsvValue } from './matchRecord'
+
 export const parseCSV = (csvText) => {
   const lines = csvText.trim().split('\n')
   if (lines.length === 0) return []
@@ -13,16 +15,8 @@ export const parseCSV = (csvText) => {
     const row = {}
 
     headers.forEach((header, index) => {
-      let value = values[index] ? values[index].trim() : ''
-      
-      if (header.includes('Rating')) {
-        value = parseInt(value, 10)
-        if (isNaN(value)) value = null
-      } else if (header.endsWith('?')) {
-        value = value === 'true'
-      }
-      
-      row[header] = value
+      const raw = values[index] ? values[index].trim() : ''
+      row[header] = coerceCsvValue(header, raw)
     })
 
     rows.push(row)
@@ -114,31 +108,7 @@ export const downloadCSV = (rows, headers, filename = 'match_data_rows.csv') => 
   document.body.removeChild(link)
 }
 
-export const getCSVHeaders = () => {
-  return [
-    'Scouting ID',
-    'Scouter Name',
-    'Position',
-    'Auto Path',
-    'Shot While Moving',
-    'Shot Coordinates',
-    'Pin Rating',
-    'Steal Rating',
-    'Block Rating',
-    'Ram Rating',
-    'AntiPin Rating',
-    'AntiSteal Rating',
-    'AntiBlock Rating',
-    'AntiRam Rating',
-    'Endgame Climb',
-    'Bump?',
-    'Trench?',
-    'Penalties?',
-    'Notes',
-    'Use Data',
-    'Broke Down?'
-  ]
-}
+export const getCSVHeaders = () => getCsvHeaders()
 
 export const scannedDataToCSV = (scannedData) => {
   const headers = getCSVHeaders()

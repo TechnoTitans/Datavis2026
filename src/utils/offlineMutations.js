@@ -1,5 +1,6 @@
 import { enqueueOp } from './offlineQueue'
 import { supabase } from '../supabaseClient'
+import { pickMatchRecord } from './matchRecord'
 
 const isLikelyNetworkError = (err) => {
   if (!err) return false
@@ -87,26 +88,7 @@ export const approveUnconfirmedData = async (unconfirmedItem) => {
     async () => {
       await supabase.from('match_data').delete().eq('"Scouting ID"', scoutingId)
 
-      const matchData = {
-        'Scouting ID': unconfirmedItem['Scouting ID'],
-        'Scouter Name': unconfirmedItem['Scouter Name'],
-        'Position': unconfirmedItem['Position'],
-        'Auto Path': unconfirmedItem['Auto Path'],
-        'Cycle Count': unconfirmedItem['Cycle Count'],
-        'Tier': unconfirmedItem['Tier'],
-        'Pins': unconfirmedItem['Pins'],
-        'Steals': unconfirmedItem['Steals'],
-        'Blocks': unconfirmedItem['Blocks'],
-        'Rams': unconfirmedItem['Rams'],
-        'Defense Rating': unconfirmedItem['Defense Rating'],
-        'Endgame Climb': unconfirmedItem['Endgame Climb'],
-        'Bump?': unconfirmedItem['Bump?'],
-        'Trench?': unconfirmedItem['Trench?'],
-        'Penalties?': unconfirmedItem['Penalties?'],
-        'Notes': unconfirmedItem['Notes'],
-        'Use Data': unconfirmedItem['Use Data'],
-        'Broke Down?': unconfirmedItem['Broke Down?']
-      }
+      const matchData = pickMatchRecord(unconfirmedItem)
 
       console.log("APPROVING MATCH DATA:", matchData)
       const insertResult = await supabase.from('match_data').insert([matchData])
