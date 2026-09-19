@@ -72,6 +72,32 @@ test('defense summary flags pin/ram and averages general rating', () => {
   assert.equal(formatNumber(summary.generalAverage), '1')
 })
 
+test('reads Pins/Steals/Blocks/Rams as 0/1 flags and Defense Rating separately', () => {
+  const summary = summarizeDefense([
+    { Pins: 1, Steals: 0, Blocks: 1, Rams: 1, 'Defense Rating': 3 },
+  ])
+  const pin = summary.actions.find(action => action.key === 'pin')
+  const steal = summary.actions.find(action => action.key === 'steal')
+  const ram = summary.actions.find(action => action.key === 'ram')
+  const block = summary.actions.find(action => action.key === 'block')
+  assert.equal(summary.binary, true)
+  assert.equal(summary.scale, 5)
+  assert.equal(pin.does, true)
+  assert.equal(steal.does, false)
+  assert.equal(block.does, true)
+  assert.equal(ram.does, true)
+  assert.equal(summary.generalAverage, 3)
+})
+
+test('steals stored as boolean still counts as did/did not', () => {
+  const summary = summarizeDefense([
+    { Pins: 0, Steals: true, Blocks: 0, Rams: 0, 'Defense Rating': 1 },
+  ])
+  const steal = summary.actions.find(action => action.key === 'steal')
+  assert.equal(steal.does, true)
+  assert.equal(steal.didCount, 1)
+})
+
 test('ferry keyword matches ferry/ferries/ferrying only as words', () => {
   assert.equal(textMatchesKeyword('1833 and 4189 ferry while hub is off', 'ferry'), true)
   assert.equal(textMatchesKeyword('6705 also ferries by pushing fuel', 'ferry'), true)

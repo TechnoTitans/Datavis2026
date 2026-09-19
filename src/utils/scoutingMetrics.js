@@ -3,11 +3,13 @@ import { parseMatchNumber, parseTeamNumber } from './helpers.js'
 export const POINTS_PER_FUEL = 1
 
 export const DEFENSE_ACTIONS = [
-  { key: 'pin', label: 'Pin', column: 'Pin Rating' },
-  { key: 'ram', label: 'Ram', column: 'Ram Rating' },
-  { key: 'block', label: 'Block', column: 'Block Rating' },
-  { key: 'steal', label: 'Steal', column: 'Steal Rating' },
+  { key: 'pin', label: 'Pin', columns: ['Pins', 'Pin Rating', 'Pin'] },
+  { key: 'ram', label: 'Ram', columns: ['Rams', 'Ram Rating', 'Ram'] },
+  { key: 'block', label: 'Block', columns: ['Blocks', 'Block Rating', 'Block'] },
+  { key: 'steal', label: 'Steal', columns: ['Steals', 'Steal Rating', 'Steal'] },
 ]
+
+export const DEFENSE_RATING_COLUMNS = ['Defense Rating', 'Defense Ability', 'Defense']
 
 const EMPTY_NOTE_VALUES = new Set(['', 'null', 'true', 'false', 'n/a', 'na', 'none', '-', 'nil'])
 const EMPTY_DEFENSE_VALUES = new Set([
@@ -23,6 +25,8 @@ const EMPTY_DEFENSE_VALUES = new Set([
 ])
 
 export const toNumber = (value) => {
+  if (value === true || value === 'true') return 1
+  if (value === false || value === 'false') return 0
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string') {
     const trimmed = value.trim()
@@ -32,6 +36,23 @@ export const toNumber = (value) => {
   }
   return null
 }
+
+export const getRowNumber = (row, columns) => {
+  for (const column of columns || []) {
+    if (!row || !Object.prototype.hasOwnProperty.call(row, column)) continue
+    const parsed = toNumber(row[column])
+    if (parsed != null) return parsed
+  }
+  for (const column of columns || []) {
+    const parsed = toNumber(row?.[column])
+    if (parsed != null) return parsed
+  }
+  return null
+}
+
+export const getDefenseActionValue = (row, action) => getRowNumber(row, action.columns)
+
+export const getDefenseRatingValue = (row) => getRowNumber(row, DEFENSE_RATING_COLUMNS)
 
 export const mean = (values) => {
   const nums = (values || []).filter(value => typeof value === 'number' && Number.isFinite(value))
@@ -254,8 +275,10 @@ export const parseCycleAndFuel = (row) => {
 }
 
 export const matchDefenseRating = (row) => {
+  const explicit = getDefenseRatingValue(row)
+  if (explicit != null) return explicit
   const ratings = DEFENSE_ACTIONS
-    .map(action => toNumber(row?.[action.column]))
+    .map(action => getDefenseActionValue(row, action))
     .filter(value => value != null)
   return mean(ratings)
 }
@@ -263,7 +286,7 @@ export const matchDefenseRating = (row) => {
 export const summarizeDefense = (teamRows) => {
   const rows = Array.isArray(teamRows) ? teamRows : []
   const actions = DEFENSE_ACTIONS.map(action => {
-    const values = rows.map(row => toNumber(row?.[action.column])).filter(value => value != null)
+    const values = rows.map(row => getDefenseActionValue(row, action)).filter(value => value != null)
     const didValues = values.filter(value => value > 0)
     return {
       ...action,
@@ -276,11 +299,19 @@ export const summarizeDefense = (teamRows) => {
     }
   })
 
+  const generalValues = rows.map(matchDefenseRating).filter(value => value != null)
+  const maxAction = Math.max(0, ...actions.map(action => action.max ?? 0))
+  const maxGeneral = generalValues.length ? Math.max(...generalValues) : 0
+  const binaryActions = maxAction <= 1
+  const generalScale = maxGeneral <= 1 ? 1 : 5
+
   return {
     matchCount: rows.length,
     actions,
-    generalAverage: mean(rows.map(matchDefenseRating)),
+    generalAverage: mean(generalValues),
     doesAnyDefense: actions.some(action => action.does),
+    binary: binaryActions,
+    scale: generalScale,
   }
 }
 

@@ -5,8 +5,11 @@ import { useTeamData } from '../hooks/useTeamData'
 import { useQualData } from '../hooks/useQualData'
 import { useSelectedTeams } from '../hooks/useLocalStorage'
 import {
+  DEFENSE_ACTIONS,
   formatMatchLabel,
   formatNumber,
+  getDefenseActionValue,
+  getDefenseRatingValue,
   isEmptyDefenseText,
   mergeTeamLists,
   noteText,
@@ -14,7 +17,6 @@ import {
   qualRowHasTeam,
   summarizeDefense,
   teamFromMatchRow,
-  toNumber,
 } from '../utils/scoutingMetrics'
 
 const handleTeamToggle = (setSelectedTeams) => (teamNumber) => {
@@ -26,20 +28,25 @@ const handleTeamToggle = (setSelectedTeams) => (teamNumber) => {
   })
 }
 
-function DefenseAction({ action }) {
+function DefenseAction({ action, binary }) {
   const rate = action.matches > 0 ? `${action.didCount}/${action.matches}` : '—'
-  const avg = action.does ? `avg ${formatNumber(action.average)}` : 'never'
+  const percent = action.matches > 0 ? `${formatNumber((action.didCount / action.matches) * 100, 0)}%` : null
+  const detail = !action.does
+    ? 'never'
+    : binary
+      ? percent
+      : `avg ${formatNumber(action.average)}`
   return (
     <div
       className={`defense-flag ${action.does ? 'defense-flag-on' : 'defense-flag-off'}`}
       title={action.does
-        ? `${action.label} in ${rate} matches. Average rating ${formatNumber(action.average)}.`
-        : `No ${action.label.toLowerCase()} ratings above 0.`}
+        ? `${action.label} in ${rate} matches${binary ? ` (${percent})` : `. Average ${formatNumber(action.average)}`}.`
+        : `No ${action.label.toLowerCase()} marked as done.`}
     >
       <span className="defense-flag-mark" aria-hidden="true">{action.does ? '✓' : '–'}</span>
       <span className="defense-flag-copy">
         <span className="defense-flag-name">{action.label}</span>
-        <span className="defense-flag-meta">{rate} · {avg}</span>
+        <span className="defense-flag-meta">{rate} · {detail}</span>
       </span>
     </div>
   )
@@ -47,7 +54,10 @@ function DefenseAction({ action }) {
 
 function ScoutingDefenseCard({ team, rows }) {
   const summary = useMemo(() => summarizeDefense(rows), [rows])
-  const generalPercent = summary.generalAverage == null ? 0 : Math.max(0, Math.min(100, (summary.generalAverage / 5) * 100))
+  const scale = summary.scale || 5
+  const generalPercent = summary.generalAverage == null
+    ? 0
+    : Math.max(0, Math.min(100, (summary.generalAverage / scale) * 100))
 
   return (
     <article className="role-team-card">
@@ -63,17 +73,20 @@ function ScoutingDefenseCard({ team, rows }) {
           <div className="defense-general">
             <div>
               <p className="stat-kicker">General defense rating</p>
-              <p className="stat-value">{formatNumber(summary.generalAverage)}<span className="stat-suffix"> / 5</span></p>
+              <p className="stat-value">
+                {formatNumber(summary.generalAverage)}
+                <span className="stat-suffix"> / {scale}</span>
+              </p>
             </div>
             <div className="stat-bar" aria-hidden="true">
               <span style={{ width: `${generalPercent}%` }} />
             </div>
-            <p className="stat-hint">Average of Pin, Ram, Block, and Steal ratings across scouted matches.</p>
+            <p className="stat-hint">Average scouted Defense Rating across matches. Pin, ram, block, and steal are 0/1 did-or-didn’t flags.</p>
           </div>
 
           <div className="defense-flag-grid" role="list" aria-label={`Defense actions for team ${team}`}>
             {summary.actions.map(action => (
-              <DefenseAction key={action.key} action={action} />
+              <DefenseAction key={action.key} action={action} binary={summary.binary} />
             ))}
           </div>
 
@@ -93,12 +106,11 @@ function ScoutingDefenseCard({ team, rows }) {
                 </thead>
                 <tbody>
                   {rows.map((row, idx) => {
-                    const pin = toNumber(row['Pin Rating'])
-                    const ram = toNumber(row['Ram Rating'])
-                    const block = toNumber(row['Block Rating'])
-                    const steal = toNumber(row['Steal Rating'])
-                    const general = [pin, ram, block, steal].filter(value => value != null)
-                    const generalAvg = general.length ? general.reduce((sum, value) => sum + value, 0) / general.length : null
+                    const pin = getDefenseActionValue(row, DEFENSE_ACTIONS[0])
+                    const ram = getDefenseActionValue(row, DEFENSE_ACTIONS[1])
+                    const block = getDefenseActionValue(row, DEFENSE_ACTIONS[2])
+                    const steal = getDefenseActionValue(row, DEFENSE_ACTIONS[3])
+                    const general = getDefenseRatingValue(row)
                     return (
                       <tr key={row['Scouting ID'] || `${team}-${idx}`}>
                         <td className="sticky-column">{formatMatchLabel(row)}</td>
@@ -106,7 +118,7 @@ function ScoutingDefenseCard({ team, rows }) {
                         <td className={ram > 0 ? 'rating-hot' : ''}>{formatNumber(ram, 0)}</td>
                         <td className={block > 0 ? 'rating-hot' : ''}>{formatNumber(block, 0)}</td>
                         <td className={steal > 0 ? 'rating-hot' : ''}>{formatNumber(steal, 0)}</td>
-                        <td>{formatNumber(generalAvg)}</td>
+                        <td>{formatNumber(general, 0)}</td>
                         <td className="wrap-cell">{noteText(row.Notes) || '—'}</td>
                       </tr>
                     )
