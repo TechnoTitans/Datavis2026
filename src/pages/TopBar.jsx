@@ -1,156 +1,139 @@
-// src/pages/TopBar.jsx
-import { NavLink } from 'react-router-dom'
-import { useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { useOfflineSync } from '../hooks/useOfflineSync'
-import { Button } from '../components/ui/button'
-import { Badge } from '../components/ui/badge'
-import { Loader2 } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
+import { getCurrentTheme, setThemePreference } from '../lib/theme'
+
+const navItems = [
+  { to: '/team-data', label: 'Team', title: 'Team Data' },
+  { to: '/qual-data', label: 'Qual', title: 'Qual Data' },
+  { to: '/pit-scouting-data', label: 'Pit', title: 'Pit Scouting Data' },
+  { to: '/prescouting-data', label: 'Pre', title: 'Prescouting Data' },
+  { to: '/TBA-data', label: 'TBA', title: 'TBA Data' },
+  { to: '/compare', label: 'Compare', title: 'Compare' },
+  { to: '/defense', label: 'Defense', title: 'Defense' },
+  { to: '/shooter', label: 'Shoot', title: 'Shooter / Ferrying' },
+  { to: '/team-analysis', label: 'Analysis', title: 'Team Analysis' },
+  { to: '/auto-paths', label: 'Autos', title: 'Auto Paths' },
+  { to: '/picklist', label: 'Picklist', title: 'Picklist' },
+  { to: '/upload', label: 'Upload', title: 'Upload' },
+  { to: '/settings', label: 'Settings', title: 'Settings' },
+]
+
+function NavItem({ item, onNavigate, isOn }) {
+  return (
+    <NavLink
+      to={item.to}
+      title={item.title}
+      onClick={onNavigate}
+      className={() => ['nav-chip', isOn ? 'nav-chip-active' : ''].join(' ')}
+    >
+      {item.label}
+    </NavLink>
+  )
+}
 
 function Layout({ children }) {
   const { isOnline, pendingCount, syncing, syncNow } = useOfflineSync()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isDark, setIsDark] = useState(() => getCurrentTheme() === 'dark')
+  const location = useLocation()
 
-  const navItems = [
-    { to: '/team-data', label: 'Team Data' },
-    { to: '/qual-data', label: 'Qual Data' },
-    { to: '/pit-scouting-data', label: 'Pit Scouting Data'},
-    { to: '/prescouting-data', label: 'Prescouting Data'},
-    //{ to: '/statbotics-data', label: 'Statbotics Data' },
-    { to: '/TBA-data', label: 'TBA Data' },
-    { to: '/compare', label: 'Compare' },
-    { to: '/team-analysis', label: 'Team Analysis' },
-    { to: '/auto-paths', label: 'Auto Paths' },
-    //{ to: '/match-strategy', label: 'Match Strategy' },
-    //{ to: '/rankings', label: 'Rankings' },
-    { to: '/picklist', label: 'Picklist' },
-    { to: '/upload', label: 'Upload' },
-    { to: '/settings', label: 'Settings' },
-  ]
+  const isItemOn = (item) => {
+    if (item.to === '/team-data') {
+      return location.pathname === '/' || location.pathname === '/team-data'
+    }
+    return location.pathname === item.to
+  }
+
+  useEffect(() => {
+    const syncTheme = () => setIsDark(getCurrentTheme() === 'dark')
+    window.addEventListener('themechange', syncTheme)
+    window.addEventListener('storage', syncTheme)
+    return () => {
+      window.removeEventListener('themechange', syncTheme)
+      window.removeEventListener('storage', syncTheme)
+    }
+  }, [])
+
+  const status = (
+    <>
+      {!isOnline ? <span className="glass-icon-btn">Offline</span> : null}
+      {pendingCount > 0 ? (
+        <button
+          type="button"
+          className="glass-icon-btn tabular-nums"
+          onClick={syncNow}
+          disabled={!isOnline || syncing}
+          title="Sync queued changes"
+        >
+          Sync {pendingCount}
+        </button>
+      ) : null}
+      <button
+        type="button"
+        className="glass-icon-btn h-8 w-8 px-0"
+        onClick={() => setThemePreference(isDark ? 'light' : 'dark')}
+        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+      </button>
+    </>
+  )
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95">
-        <div className="mx-auto w-full max-w-6xl px-6 py-3">
-          <div className="grid grid-cols-[auto,1fr,auto] items-center gap-4">
-            <NavLink
-              to="/"
-              onClick={() => setMenuOpen(false)}
-              className="text-xl font-semibold tracking-tight text-foreground/95"
+    <div className="relative min-h-screen overflow-x-hidden">
+      <div className="glass-grain" aria-hidden="true" />
+
+      <header className="sticky top-0 z-40 flex justify-center px-3 pt-3">
+        <div className="glass-nav flex w-max max-w-[calc(100vw-1.5rem)] items-center gap-0.5 rounded-full py-1 pl-3 pr-1.5">
+          <NavLink
+            to="/"
+            end
+            onClick={() => setMenuOpen(false)}
+            className="relative z-10 shrink-0 pr-2 text-[14px] font-semibold tracking-tight text-foreground"
+          >
+            DataVis
+          </NavLink>
+
+          <span className="nav-rule hidden md:block" aria-hidden="true" />
+
+          <nav className="no-scrollbar relative z-10 hidden min-w-0 items-center overflow-x-auto md:flex">
+            {navItems.map(item => (
+              <NavItem key={item.to} item={item} isOn={isItemOn(item)} onNavigate={() => setMenuOpen(false)} />
+            ))}
+          </nav>
+
+          <span className="nav-rule hidden md:block" aria-hidden="true" />
+
+          <div className="relative z-10 hidden shrink-0 items-center gap-0.5 md:flex">{status}</div>
+
+          <div className="relative z-10 flex items-center gap-0.5 md:hidden">
+            {status}
+            <button
+              type="button"
+              className="glass-icon-btn"
+              onClick={() => setMenuOpen(v => !v)}
+              aria-expanded={menuOpen}
             >
-              DataVis
-            </NavLink>
-
-            <nav className="no-scrollbar hidden min-w-0 items-center gap-1 overflow-x-auto rounded-lg border border-border/70 bg-card/80 p-1 md:flex">
-              {navItems.map(item => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    [
-                      'whitespace-nowrap rounded-md px-3 py-2 text-[14px] font-medium',
-                      isActive
-                        ? 'border border-primary/25 bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                    ].join(' ')
-                  }
-                >
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
-
-            <div className="hidden shrink-0 items-center gap-2 md:flex">
-              <Badge variant="secondary" className="gap-2 whitespace-nowrap border border-border/70 px-3 py-2 text-sm">
-                <span className={`h-3 w-3 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                {isOnline ? 'Online' : 'Offline'}
-              </Badge>
-              <Badge variant="outline" className="gap-2 whitespace-nowrap px-3 py-2 text-sm tabular-nums">
-                <span>Pending {pendingCount}</span>
-                <Loader2
-                  className={`h-4 w-4 ${syncing ? 'animate-spin opacity-100' : 'opacity-0'}`}
-                  aria-hidden={!syncing}
-                />
-              </Badge>
-              <Button
-                variant="outline"
-                size="default"
-                className="h-10 border-border/80 px-4 text-sm"
-                onClick={syncNow}
-                disabled={!isOnline || syncing || pendingCount === 0}
-                title={!isOnline ? 'Reconnect to sync' : pendingCount === 0 ? 'No pending changes' : 'Sync now'}
-              >
-                Sync
-              </Button>
-            </div>
-
-            <div className="md:hidden">
-              <Button
-                variant="outline"
-                size="default"
-                className="h-10 px-4 text-sm"
-                onClick={() => setMenuOpen(v => !v)}
-                aria-expanded={menuOpen}
-              >
-                {menuOpen ? 'Close' : 'Menu'}
-              </Button>
-            </div>
+              {menuOpen ? 'Close' : 'Menu'}
+            </button>
           </div>
         </div>
-
-        {menuOpen ? (
-          <div className="border-t border-border/70 bg-card/90 md:hidden">
-            <div className="mx-auto grid max-w-6xl gap-2 px-6 py-4">
-              <div className="flex items-center gap-2 pb-1">
-                <Badge variant="outline" className="gap-2 whitespace-nowrap tabular-nums">
-                  <span>Pending {pendingCount}</span>
-                  <Loader2
-                    className={`h-3.5 w-3.5 ${syncing ? 'animate-spin opacity-100' : 'opacity-0'}`}
-                    aria-hidden={!syncing}
-                  />
-                </Badge>
-                <Badge variant="secondary" className="gap-2 whitespace-nowrap">
-                  <span className={`h-3 w-3 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                  {isOnline ? 'Online' : 'Offline'}
-                </Badge>
-                <Button
-                  variant="outline"
-                  size="default"
-                  className="h-10 px-4 text-sm"
-                  onClick={syncNow}
-                  disabled={!isOnline || syncing || pendingCount === 0}
-                >
-                  Sync
-                </Button>
-              </div>
-              <div className="grid gap-1">
-                {navItems.map(item => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setMenuOpen(false)}
-                    className={({ isActive }) =>
-                      [
-                        'rounded-md px-3 py-2 text-sm font-medium',
-                        isActive
-                          ? 'border border-primary/25 bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                      ].join(' ')
-                    }
-                  >
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-6 py-10 min-w-0">
-        <section className="rounded-2xl border border-border/80 bg-card p-6 shadow-sm md:p-8 min-w-0">
-          {children}
-        </section>
+      {menuOpen ? (
+        <div className="sticky top-[3.4rem] z-40 flex justify-center px-3 pt-2 md:hidden">
+          <div className="glass-menu grid w-full max-w-sm gap-1 rounded-[22px] px-2 py-2">
+            {navItems.map(item => (
+              <NavItem key={item.to} item={item} isOn={isItemOn(item)} onNavigate={() => setMenuOpen(false)} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <main className="relative z-10 mx-auto w-full min-w-0 max-w-[1400px] px-4 py-6 md:px-6 md:py-7">
+        {children}
       </main>
     </div>
   )

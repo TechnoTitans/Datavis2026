@@ -1,0 +1,403 @@
+.role-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.role-lead,
+.role-team-sub,
+.stat-hint,
+.stat-kicker {
+  color: rgba(30, 27, 22, 0.72);
+}
+
+.role-lead {
+  max-width: 46rem;
+  margin-bottom: 0.25rem;
+}
+
+.role-section {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.role-section .team-data-header,
+.role-page .team-data-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.role-team-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.role-team-card,
+.role-panel {
+  border: 1px solid rgba(40, 32, 18, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 252, 247, 0.9);
+  box-shadow: 0 18px 40px rgba(40, 30, 10, 0.08);
+}
+
+.role-team-card {
+  padding: 1.15rem 1.2rem 1.3rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.role-team-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.role-team-header .team-header {
+  margin: 0;
+  text-align: left;
+}
+
+.role-split {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 960px) {
+  .role-split {
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: start;
+  }
+}
+
+.role-panel {
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.role-panel h4,
+.role-panel h5 {
+  margin: 0;
+}
+
+.role-panel h4 {
+  font-size: 1rem;
+}
+
+.role-panel h5 {
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(30, 27, 22, 0.62);
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: end;
+}
+
+.filter-label,
+.role-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(24, 24, 27, 0.92);
+}
+
+.filter-label {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.filter-input {
+  min-height: 2.5rem;
+  min-width: 14rem;
+  border: 1px solid rgba(148, 163, 184, 0.44);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 1);
+  color: rgba(24, 24, 27, 0.96);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.defense-flag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+  gap: 0.65rem;
+}
+
+.defense-flag {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 3.4rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 14px;
+  border: 1px solid rgba(40, 32, 18, 0.1);
+}
+
+.defense-flag-on {
+  background: rgba(22, 163, 74, 0.12);
+  border-color: rgba(21, 128, 61, 0.28);
+}
+
+.defense-flag-off {
+  background: rgba(24, 24, 27, 0.04);
+  color: rgba(24, 24, 27, 0.45);
+}
+
+.defense-flag-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.defense-flag-on .defense-flag-mark {
+  background: rgba(22, 163, 74, 0.92);
+  color: white;
+}
+
+.defense-flag-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.defense-flag-name {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.defense-flag-meta,
+.role-team-sub,
+.stat-kicker {
+  font-size: 0.78rem;
+}
+
+.defense-general,
+.stat-pill {
+  border: 1px solid rgba(40, 32, 18, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.9rem 1rem;
+}
+
+.stat-value {
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  color: hsl(var(--foreground));
+}
+
+.stat-suffix {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(30, 27, 22, 0.55);
+}
+
+.stat-bar {
+  margin-top: 0.7rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(24, 24, 27, 0.08);
+  overflow: hidden;
+}
+
+.stat-bar span {
+  display: block;
+  height: 100%;
+  background: rgba(24, 24, 27, 0.88);
+}
+
+.stat-pill-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.65rem;
+}
+
+.stat-pill-accent {
+  background: rgba(24, 24, 27, 0.94);
+}
+
+.stat-pill-accent .stat-kicker,
+.stat-pill-accent .stat-value {
+  color: rgba(250, 247, 242, 0.96);
+}
+
+.role-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.role-badge,
+.role-mini {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.role-badge-shoot {
+  background: rgba(37, 99, 235, 0.14);
+  color: rgb(29, 78, 216);
+}
+
+.role-badge-ferry {
+  background: rgba(217, 119, 6, 0.16);
+  color: rgb(180, 83, 9);
+}
+
+.role-badge-both {
+  background: rgba(24, 24, 27, 0.94);
+  color: rgba(250, 247, 242, 0.98);
+}
+
+.role-badge-neither {
+  background: rgba(24, 24, 27, 0.08);
+  color: rgba(24, 24, 27, 0.55);
+}
+
+.role-mini.is-on {
+  background: rgba(22, 163, 74, 0.14);
+  color: rgb(21, 128, 61);
+}
+
+.role-mini.is-off {
+  background: rgba(24, 24, 27, 0.06);
+  color: rgba(24, 24, 27, 0.38);
+}
+
+.ferry-block {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.ferry-list {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ferry-list li {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(40, 32, 18, 0.08);
+}
+
+.ferry-match {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(30, 27, 22, 0.6);
+}
+
+.keyword-mark {
+  background: rgba(250, 204, 21, 0.62);
+  color: inherit;
+  padding: 0 0.12em;
+  border-radius: 0.25rem;
+}
+
+.wrap-cell {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rating-hot {
+  font-weight: 700;
+  color: rgb(21, 128, 61);
+}
+
+.muted-cell {
+  color: rgba(24, 24, 27, 0.4);
+}
+
+.dark .role-lead,
+.dark .role-team-sub,
+.dark .stat-hint,
+.dark .stat-kicker,
+.dark .role-panel h5,
+.dark .ferry-match {
+  color: rgba(203, 213, 225, 0.72);
+}
+
+.dark .role-team-card,
+.dark .role-panel,
+.dark .defense-general,
+.dark .stat-pill,
+.dark .ferry-list li {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(28, 27, 24, 0.88);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+}
+
+.dark .filter-label,
+.dark .role-toggle {
+  color: rgba(226, 232, 240, 0.94);
+}
+
+.dark .filter-input {
+  border-color: rgba(71, 85, 105, 0.7);
+  background: rgba(10, 10, 10, 0.86);
+  color: rgba(226, 232, 240, 0.96);
+}
+
+.dark .defense-flag-off,
+.dark .role-badge-neither,
+.dark .role-mini.is-off {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.dark .defense-flag-on {
+  background: rgba(22, 163, 74, 0.18);
+}
+
+.dark .stat-bar {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .stat-bar span {
+  background: rgba(250, 247, 242, 0.92);
+}
+
+.dark .stat-pill-accent {
+  background: rgba(250, 247, 242, 0.94);
+}
+
+.dark .stat-pill-accent .stat-kicker,
+.dark .stat-pill-accent .stat-value {
+  color: rgba(16, 16, 16, 0.96);
+}
+
+.dark .rating-hot {
+  color: rgb(74, 222, 128);
+}
+
+.dark .muted-cell {
+  color: rgba(148, 163, 184, 0.55);
+}

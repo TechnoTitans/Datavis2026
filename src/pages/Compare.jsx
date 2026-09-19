@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TeamSelector from '../components/TeamSelector'
-import StatCharts from '../components/charts/StatCharts'
-import Loading from '../components/Loading'
 import { useSelectedTeams, useLocalStorage } from '../hooks/useLocalStorage'
 import { useTeamSummary } from '../hooks/useTeamSummary'
 import { useCompareData } from '../hooks/useCompareData'
@@ -32,19 +30,6 @@ const COMPARE_STAT_FIELDS = [
   'Tier',
 ]
 
-const PRIMARY_ACTION_FIELDS = [
-  'Pin',
-  'Ram',
-  'Block',
-  'Steal',
-  'Anti Pin',
-  'Anti Ram',
-  'Anti Block',
-  'Anti Steal',
-]
-
-const EXTRA_ACTION_FIELDS = ['Penalties', 'Bump', 'Trench', 'Broke Down']
-
 const RATING_FIELDS = [
   'Pin',
   'Ram',
@@ -55,10 +40,6 @@ const RATING_FIELDS = [
   'Anti Block',
   'Anti Steal',
 ]
-
-const getSummaryMetric = (teamSummary, fieldName) => {
-  return teamSummary?.[fieldName] || null
-}
 
 const getSummaryNumericValue = (teamSummary, fieldName) => {
   const metric = teamSummary?.[fieldName]
@@ -77,25 +58,6 @@ const getSummaryNumericValue = (teamSummary, fieldName) => {
   return null
 }
 
-const formatMetricSummary = (metric) => {
-  if (!metric) return '—'
-
-  if (metric.type === 'scoring') {
-    const attempts = Number(metric.avgAttempts)
-    const made = Number(metric.average)
-    const attemptsLabel = Number.isFinite(attempts) ? attempts.toFixed(2) : String(metric.avgAttempts)
-    const madeLabel = Number.isFinite(made) ? made.toFixed(2) : String(metric.average)
-    return `Attempts: ${attemptsLabel} | Success: ${metric.successRate}% | Made: ${madeLabel}`
-  }
-
-  if (metric.type === 'number') {
-    const value = Number(metric.value)
-    return Number.isFinite(value) ? value.toFixed(2) : String(metric.value)
-  }
-
-  return `${metric.value} (${metric.percent}%)`
-}
-
 const fetchTeamOPR = async (teamNumber) => {
   try {
     const apiKey = import.meta.env.VITE_TBA_API_KEY
@@ -112,9 +74,7 @@ const fetchTeamOPR = async (teamNumber) => {
       return null
     }
     const data = await response.json()
-    const opr = data?.stat_median?.opr ?? null
-    console.log(`OPR for team ${teamNumber}: ${opr}`)
-    return opr
+    return data?.stat_median?.opr ?? null
   } catch (error) {
     console.error(`Failed to fetch OPR for team ${teamNumber}:`, error)
     return null
@@ -239,7 +199,7 @@ function Compare() {
 
   const [selectedTeams, setSelectedTeams] = useSelectedTeams('selectedTeams', [])
   const [selectedStat, setSelectedStat] = useLocalStorage('selectedStat', '', (v) => v, (v) => v)
-  const [useMaxValues, setUseMaxValues] = useLocalStorage('compareUseMax', false)
+  const [useMaxValues] = useLocalStorage('compareUseMax', false)
   const [sourceMode, setSourceMode] = useLocalStorage(
     'compareSourceMode',
     'combined',
@@ -248,9 +208,6 @@ function Compare() {
   )
   const [useDataOnly, setUseDataOnly] = useLocalStorage('compareUseDataOnly', true)
   const [selectedScouters, setSelectedScouters] = useLocalStorage('compareSelectedScouters', [])
-  const [statSearchTerm, setStatSearchTerm] = useState('')
-  const [showStatGrid, setShowStatGrid] = useState(false)
-  const [expandedCells, setExpandedCells] = useState(new Set())
   const [oprData, setOprData] = useState({})
   const [pinnedField, setPinnedField] = useState(null)
 
@@ -278,20 +235,16 @@ function Compare() {
   
   console.log("MATCH ROW:", JSON.stringify(matchRows[0], null, 2))
 
-  const availableFields = useMemo(() => {
-    return COMPARE_STAT_FIELDS
-  }, [])
-
   useEffect(() => {
-    if (!availableFields.length) {
+    if (!COMPARE_STAT_FIELDS.length) {
       if (selectedStat) setSelectedStat('')
       return
     }
 
-    if (!selectedStat || !availableFields.includes(selectedStat)) {
-      setSelectedStat(availableFields[0])
+    if (!selectedStat || !COMPARE_STAT_FIELDS.includes(selectedStat)) {
+      setSelectedStat(COMPARE_STAT_FIELDS[0])
     }
-  }, [availableFields, selectedStat, setSelectedStat])
+  }, [selectedStat, setSelectedStat])
 
   useEffect(() => {
     const fetchOPRForTeams = async () => {
@@ -321,9 +274,9 @@ function Compare() {
   }, [safeSelectedTeams, matchRows, summary])
 
   const sortedFields = useMemo(() => {
-    if (!pinnedField) return availableFields
-    return [pinnedField, ...availableFields.filter(f => f !== pinnedField)]
-  }, [availableFields, pinnedField])
+    if (!pinnedField) return COMPARE_STAT_FIELDS
+    return [pinnedField, ...COMPARE_STAT_FIELDS.filter(f => f !== pinnedField)]
+  }, [pinnedField])
 
   const handleFieldDoubleClick = (field) => {
     setPinnedField(prev => prev === field ? null : field)
@@ -356,65 +309,10 @@ function Compare() {
     setSelectedTeams([])
   }
 
-  const resetCompareFilters = () => {
-    setSourceMode('combined')
-    setUseDataOnly(false)
-    setSelectedScouters([])
-    setSelectedTeams([])
-  }
-
   const handleTeamClick = (teamNumber) => {
     localStorage.setItem('selectedTeamsAnalysis', JSON.stringify([String(teamNumber)]))
     navigate('/team-analysis')
   }
-
-  const handleCellClick = (team, field) => {
-    const cellId = `${team}-${field}`
-    setExpandedCells(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(cellId)) {
-        newSet.delete(cellId)
-      } else {
-        newSet.add(cellId)
-      }
-      return newSet
-    })
-  }
-
-  const filteredStats = availableFields.filter(stat =>
-    stat.toLowerCase().includes(statSearchTerm.toLowerCase())
-  )
-
-  const capabilityCards = useMemo(() => {
-    return safeSelectedTeams
-      .map((team) => {
-        const teamSummary = summary[team]
-        if (!teamSummary) return null
-
-        const actions = PRIMARY_ACTION_FIELDS.map((field) => {
-          const metric = getSummaryMetric(teamSummary, field)
-          const numericValue = getSummaryNumericValue(teamSummary, field)
-          return { field, metric, numericValue }
-        })
-
-        const activeActions = actions.filter(
-          (action) => action.numericValue !== null && action.numericValue > 0,
-        )
-        const extras = EXTRA_ACTION_FIELDS.map((field) => ({
-          field,
-          metric: getSummaryMetric(teamSummary, field),
-        }))
-
-        return {
-          team,
-          actions,
-          activeActions,
-          extras,
-        }
-      })
-      .filter(Boolean)
-  }, [safeSelectedTeams, summary])
-
 
   return (
     <div className="compare-container">
@@ -498,23 +396,159 @@ function Compare() {
           <p>No data to summarize.</p>
         ) : (
           <div className="summary-container" data-count={safeSelectedTeams.length}>
-            <SummaryChart
-              safeSelectedTeams={safeSelectedTeams}
-              matchRows={matchRows}
-              summary={summary}
-              oprData={oprData}
-              handleTeamClick={handleTeamClick}
-              sortedFields={sortedFields}
-              fieldColorMaps={fieldColorMaps}
-              pinnedField={pinnedField}
-              handleFieldDoubleClick={handleFieldDoubleClick}
-              handleCellClick={handleCellClick}
-              calculateRatingStats={calculateRatingStats}
-              calculateBooleanPercentage={calculateBooleanPercentage}
-              zeroToNull={zeroToNull}
-              RATING_FIELDS={RATING_FIELDS}
-              RANK_COLOR_STYLES={RANK_COLOR_STYLES}
-/>
+            {safeSelectedTeams.map(team => {
+              const teamRows = matchRows.filter(row => String(row.team) === String(team))
+
+              return summary[team] ? (
+                <div key={team} className="summary-card">
+                  <h3
+                    className="team-header-clickable"
+                    onClick={() => handleTeamClick(team)}
+                  >
+                    Team {team}
+                  </h3>
+
+                  {oprData[team] !== undefined && (
+                    <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'rgba(204, 251, 241, 0.82)', borderBottom: '1px solid rgba(148, 163, 184, 0.28)', fontWeight: 600 }}>
+                      <strong>OPR (The Blue Alliance):</strong> {oprData[team] !== null ? oprData[team].toFixed(2) : 'N/A'}
+                    </div>
+                  )}
+
+                  {/* Unified stats table with Avg / Min / Max columns for rating fields */}
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Field</th>
+                        <th>Avg</th>
+                        <th>Min</th>
+                        <th>Max</th>
+                        <th>Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedFields.map(field => {
+                        const isRatingField = RATING_FIELDS.includes(field)
+                        const booleanFields = ['Penalties', 'Bump', 'Trench', 'Broke Down']
+                        const isBooleanField = booleanFields.includes(field)
+
+                        const rankLabel = fieldColorMaps[field]?.[team]
+                        const rankStyle = rankLabel ? RANK_COLOR_STYLES[rankLabel] : undefined
+
+                        const isPinned = pinnedField === field
+                        const fieldCellStyle = isPinned
+                          ? { fontWeight: 700, color: '#6366f1', cursor: 'pointer', userSelect: 'none' }
+                          : { cursor: 'pointer', userSelect: 'none' }
+
+                        if (isRatingField) {
+                          const ratingStats = calculateRatingStats(teamRows, field)
+                          if (!ratingStats) return null
+                          return (
+                            <tr key={field}>
+                              <td
+                                style={fieldCellStyle}
+                                onDoubleClick={() => handleFieldDoubleClick(field)}
+                                title="Double-click to pin this field to the top"
+                              >
+                                {isPinned ? ' ' : ''}{field}
+                              </td>
+                              <td style={rankStyle || {}}>{ratingStats.average}</td>
+                              <td>{ratingStats.min}</td>
+                              <td>{ratingStats.max}</td>
+                              <td>Rating ({ratingStats.count} matches)</td>
+                            </tr>
+                          )
+                        }
+
+                        if (isBooleanField) {
+                          const booleanStats = calculateBooleanPercentage(teamRows, field)
+                          return (
+                            <tr key={field}>
+                              <td
+                                style={fieldCellStyle}
+                                onDoubleClick={() => handleFieldDoubleClick(field)}
+                                title="Double-click to pin this field to the top"
+                              >
+                                {isPinned ? ' ' : ''}{field}
+                              </td>
+                              <td colSpan={3} style={rankStyle || {}}>
+                                {booleanStats
+                                  ? <span style={rankStyle || {}}>{booleanStats.percentage}%</span>
+                                  : 'N/A'}
+                              </td>
+                              <td>
+                                {booleanStats
+                                  ? `${booleanStats.trueCount} / ${booleanStats.totalCount} matches`
+                                  : '—'}
+                              </td>
+                            </tr>
+                          )
+                        }
+
+                        if (!summary[team][field]) return null
+                        const metric = summary[team][field]
+
+                        if (metric.type === 'scoring') {
+                          const attempts = Number(metric.avgAttempts)
+                          const made = Number(metric.average)
+                          const attemptsLabel = Number.isFinite(attempts) ? attempts.toFixed(2) : String(metric.avgAttempts)
+                          const madeLabel = zeroToNull(Number.isFinite(made) ? made.toFixed(2) : null)
+                          if (!madeLabel) return null
+                          return (
+                            <tr key={field}>
+                              <td
+                                style={fieldCellStyle}
+                                onDoubleClick={() => handleFieldDoubleClick(field)}
+                                title="Double-click to pin this field to the top"
+                              >
+                                {isPinned ? ' ' : ''}{field}
+                              </td>
+                              <td style={rankStyle || {}}>{madeLabel}</td>
+                              <td colSpan={2}>—</td>
+                              <td>{attemptsLabel} attempts · {metric.successRate}% success</td>
+                            </tr>
+                          )
+                        }
+
+                        if (metric.type === 'number') {
+                          const value = Number(metric.value)
+                          const displayValue = zeroToNull(Number.isFinite(value) ? value.toFixed(2) : null)
+                          if (!displayValue) return null
+                          return (
+                            <tr key={field}>
+                              <td
+                                style={fieldCellStyle}
+                                onDoubleClick={() => handleFieldDoubleClick(field)}
+                                title="Double-click to pin this field to the top"
+                              >
+                                {isPinned ? ' ' : ''}{field}
+                              </td>
+                              <td style={rankStyle || {}}>{displayValue}</td>
+                              <td colSpan={2}>—</td>
+                              <td>—</td>
+                            </tr>
+                          )
+                        }
+
+                        // boolean-like fallback (percent)
+                        return (
+                          <tr key={field}>
+                            <td
+                              style={fieldCellStyle}
+                              onDoubleClick={() => handleFieldDoubleClick(field)}
+                              title="Double-click to pin this field to the top"
+                            >
+                              {isPinned ? ' ' : ''}{field}
+                            </td>
+                            <td colSpan={3} style={rankStyle || {}}>{metric.value} ({metric.percent}%)</td>
+                            <td>—</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null
+            })}
           </div>
         )}
       </div>

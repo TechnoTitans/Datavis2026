@@ -1,4 +1,4 @@
-export const THEME_STORAGE_KEY = 'themePreference'
+export const THEME_STORAGE_KEY = 'datavisTheme'
 
 const VALID_THEMES = new Set(['light', 'dark'])
 
@@ -15,7 +15,7 @@ export const getStoredTheme = () => {
   return VALID_THEMES.has(stored) ? stored : null
 }
 
-export const getPreferredTheme = () => getStoredTheme() || getSystemTheme()
+export const getPreferredTheme = () => getStoredTheme() || 'light'
 
 export const applyTheme = (theme) => {
   if (typeof document === 'undefined') return 'light'
