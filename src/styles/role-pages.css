@@ -332,6 +332,46 @@
   color: rgb(21, 128, 61);
 }
 
+.team-data-table-container .defense-raw-table tbody tr.defense-row-included td,
+.team-data-table-container .defense-raw-table tbody tr.defense-row-included td.sticky-column,
+.team-data-table-container .defense-raw-table tbody tr.defense-row-included:hover td,
+.team-data-table-container .defense-raw-table tbody tr.defense-row-included:hover td.sticky-column {
+  background: rgba(22, 163, 74, 0.12);
+}
+
+.team-data-table-container .defense-raw-table tbody tr.defense-row-included td.sticky-column {
+  box-shadow: inset 4px 0 0 rgb(22, 163, 74);
+}
+
+.team-data-table-container .defense-raw-table tbody tr.defense-row-excluded td,
+.team-data-table-container .defense-raw-table tbody tr.defense-row-excluded td.sticky-column,
+.team-data-table-container .defense-raw-table tbody tr.defense-row-excluded:hover td,
+.team-data-table-container .defense-raw-table tbody tr.defense-row-excluded:hover td.sticky-column {
+  background: rgba(24, 24, 27, 0.035);
+  color: rgba(24, 24, 27, 0.48);
+}
+
+.avg-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.avg-chip-on {
+  background: rgba(22, 163, 74, 0.16);
+  color: rgb(21, 128, 61);
+}
+
+.avg-chip-off {
+  background: rgba(24, 24, 27, 0.08);
+  color: rgba(24, 24, 27, 0.48);
+}
+
 .muted-cell {
   color: rgba(24, 24, 27, 0.4);
 }
@@ -396,6 +436,31 @@
 
 .dark .rating-hot {
   color: rgb(74, 222, 128);
+}
+
+.dark .team-data-table-container .defense-raw-table tbody tr.defense-row-included td,
+.dark .team-data-table-container .defense-raw-table tbody tr.defense-row-included td.sticky-column,
+.dark .team-data-table-container .defense-raw-table tbody tr.defense-row-included:hover td,
+.dark .team-data-table-container .defense-raw-table tbody tr.defense-row-included:hover td.sticky-column {
+  background: rgba(22, 163, 74, 0.18);
+}
+
+.dark .team-data-table-container .defense-raw-table tbody tr.defense-row-excluded td,
+.dark .team-data-table-container .defense-raw-table tbody tr.defense-row-excluded td.sticky-column,
+.dark .team-data-table-container .defense-raw-table tbody tr.defense-row-excluded:hover td,
+.dark .team-data-table-container .defense-raw-table tbody tr.defense-row-excluded:hover td.sticky-column {
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.dark .avg-chip-on {
+  background: rgba(22, 163, 74, 0.22);
+  color: rgb(134, 239, 172);
+}
+
+.dark .avg-chip-off {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(148, 163, 184, 0.75);
 }
 
 .dark .muted-cell {

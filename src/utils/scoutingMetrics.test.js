@@ -59,7 +59,7 @@ test('same-source cycle/fuel does not square the shot count', () => {
   assert.equal(parsed.optimisticMode, 'fuel_points')
 })
 
-test('defense summary flags pin/ram and averages general rating', () => {
+test('defense summary flags pin/ram and omits all-zero matches from the average', () => {
   const summary = summarizeDefense([
     { 'Pin Rating': 5, 'Ram Rating': 0, 'Block Rating': 2, 'Steal Rating': 1 },
     { 'Pin Rating': 0, 'Ram Rating': 0, 'Block Rating': 0, 'Steal Rating': 0 },
@@ -69,7 +69,11 @@ test('defense summary flags pin/ram and averages general rating', () => {
   assert.equal(pin.does, true)
   assert.equal(ram.does, false)
   assert.equal(pin.didCount, 1)
-  assert.equal(formatNumber(summary.generalAverage), '1')
+  assert.equal(summary.includedCount, 1)
+  assert.equal(summary.excludedCount, 1)
+  assert.equal(summary.assessedRows[0].included, true)
+  assert.equal(summary.assessedRows[1].included, false)
+  assert.equal(formatNumber(summary.generalAverage), '2')
 })
 
 test('reads Pins/Steals/Blocks/Rams as 0/1 flags and Defense Rating separately', () => {
@@ -87,6 +91,42 @@ test('reads Pins/Steals/Blocks/Rams as 0/1 flags and Defense Rating separately',
   assert.equal(block.does, true)
   assert.equal(ram.does, true)
   assert.equal(summary.generalAverage, 3)
+})
+
+test('zero-star matches with no defense checks are omitted from the average', () => {
+  const summary = summarizeDefense([
+    { Pins: 1, Steals: 0, Blocks: 1, Rams: 1, 'Defense Rating': 3, 'Penalties?': false },
+    { Pins: 0, Steals: 0, Blocks: 0, Rams: 0, 'Defense Rating': 0, 'Penalties?': true },
+    { Pins: 0, Steals: 0, Blocks: 0, Rams: 0, 'Defense Rating': 4, 'Penalties?': false },
+    { Pins: 1, Steals: 0, Blocks: 0, Rams: 0, 'Defense Rating': 0, 'Penalties?': false },
+  ])
+  assert.equal(summary.includedCount, 3)
+  assert.equal(summary.excludedCount, 1)
+  assert.deepEqual(summary.assessedRows.map(row => row.included), [true, false, true, true])
+  assert.equal(summary.generalAverage, 7 / 3)
+  assert.equal(summary.penalties.does, true)
+  assert.equal(summary.penalties.didCount, 1)
+  assert.equal(summary.penalties.matches, 4)
+})
+
+test('penalties-only matches do not count as playing defense', () => {
+  const summary = summarizeDefense([
+    { Pins: 0, Steals: 0, Blocks: 0, Rams: 0, 'Defense Rating': 0, 'Penalties?': true },
+  ])
+  assert.equal(summary.includedCount, 0)
+  assert.equal(summary.generalAverage, null)
+  assert.equal(summary.scale, 5)
+  assert.equal(summary.penalties.does, true)
+  assert.equal(summary.assessedRows[0].included, false)
+  assert.equal(summary.assessedRows[0].penalties, true)
+})
+
+test('Penalties alias without question mark still counts', () => {
+  const summary = summarizeDefense([
+    { Pins: 1, Steals: 0, Blocks: 0, Rams: 0, 'Defense Rating': 2, Penalties: true },
+  ])
+  assert.equal(summary.penalties.didCount, 1)
+  assert.equal(summary.assessedRows[0].penalties, true)
 })
 
 test('steals stored as boolean still counts as did/did not', () => {

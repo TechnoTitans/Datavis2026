@@ -1,7 +1,7 @@
 import { parseMatchNumber, parseTeamNumber } from './helpers.js'
-import { CYCLE_COLUMNS, DEFENSE_ACTIONS, DEFENSE_RATING_COLUMNS } from '../constants/matchSchema.js'
+import { CYCLE_COLUMNS, DEFENSE_ACTIONS, DEFENSE_RATING_COLUMNS, PENALTY_COLUMNS } from '../constants/matchSchema.js'
 
-export { DEFENSE_ACTIONS, DEFENSE_RATING_COLUMNS } from '../constants/matchSchema.js'
+export { DEFENSE_ACTIONS, DEFENSE_RATING_COLUMNS, PENALTY_COLUMNS } from '../constants/matchSchema.js'
 
 export const POINTS_PER_FUEL = 1
 
@@ -55,6 +55,21 @@ export const getRowNumber = (row, columns) => {
 export const getDefenseActionValue = (row, action) => getRowNumber(row, action.columns)
 
 export const getDefenseRatingValue = (row) => getRowNumber(row, DEFENSE_RATING_COLUMNS)
+
+export const getPenaltyValue = (row) => {
+  const parsed = getRowNumber(row, PENALTY_COLUMNS)
+  if (parsed == null) return null
+  return parsed > 0
+}
+
+export const didPlayDefense = (row) => {
+  const rating = getDefenseRatingValue(row)
+  const playedAction = DEFENSE_ACTIONS.some(action => {
+    const value = getDefenseActionValue(row, action)
+    return value != null && value > 0
+  })
+  return playedAction || (rating != null && rating > 0)
+}
 
 export const mean = (values) => {
   const nums = (values || []).filter(value => typeof value === 'number' && Number.isFinite(value))
@@ -351,17 +366,46 @@ export const summarizeDefense = (teamRows) => {
     }
   })
 
-  const generalValues = rows.map(matchDefenseRating).filter(value => value != null)
+  const penaltyValues = rows.map(getPenaltyValue).filter(value => value != null)
+  const penaltyDidCount = penaltyValues.filter(Boolean).length
+  const penalties = {
+    key: 'penalties',
+    label: 'Penalties',
+    matches: penaltyValues.length,
+    didCount: penaltyDidCount,
+    does: penaltyDidCount > 0,
+    average: penaltyValues.length ? penaltyDidCount / penaltyValues.length : null,
+    max: penaltyDidCount > 0 ? 1 : 0,
+  }
+
+  const assessedRows = rows.map(row => {
+    const included = didPlayDefense(row)
+    return {
+      id: row?.['Scouting ID'] ?? null,
+      included,
+      rating: matchDefenseRating(row),
+      penalties: getPenaltyValue(row),
+    }
+  })
+
+  const includedRows = assessedRows.filter(entry => entry.included)
+  const generalValues = includedRows
+    .map(entry => entry.rating)
+    .filter(value => value != null)
   const maxAction = Math.max(0, ...actions.map(action => action.max ?? 0))
   const maxGeneral = generalValues.length ? Math.max(...generalValues) : 0
   const binaryActions = maxAction <= 1
-  const generalScale = maxGeneral <= 1 ? 1 : 5
+  const generalScale = generalValues.length === 0 || maxGeneral > 1 ? 5 : 1
 
   return {
     matchCount: rows.length,
+    includedCount: includedRows.length,
+    excludedCount: rows.length - includedRows.length,
+    assessedRows,
     actions,
+    penalties,
     generalAverage: mean(generalValues),
-    doesAnyDefense: actions.some(action => action.does),
+    doesAnyDefense: actions.some(action => action.does) || includedRows.length > 0,
     binary: binaryActions,
     scale: generalScale,
   }

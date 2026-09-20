@@ -16,6 +16,7 @@
  * `role` lets the rest of the app find fields without hardcoding names:
  *   defense-action | pin/ram/block/steal-style 0/1 flags
  *   defense-rating | overall defense score
+ *   penalties      | penalty flag
  *   cycles         | cycle / shot count
  *
  * `aliases` are older column names still accepted when reading data.
@@ -38,7 +39,7 @@ export const MATCH_FIELDS = [
   { key: 'Endgame Climb', type: 'string' },
   { key: 'Bump?', type: 'bool', compare: true },
   { key: 'Trench?', type: 'bool', compare: true },
-  { key: 'Penalties?', type: 'bool', compare: true },
+  { key: 'Penalties?', type: 'bool', role: 'penalties', label: 'Penalties', aliases: ['Penalties'], compare: true },
   { key: 'Broke Down?', type: 'bool', compare: true },
   { key: 'Notes', type: 'string' },
 ]
@@ -66,6 +67,10 @@ export const DEFENSE_RATING_COLUMNS = MATCH_FIELDS
 export const CYCLE_COLUMNS = MATCH_FIELDS
   .filter(field => field.role === 'cycles')
   .flatMap(field => [field.key, ...(field.aliases || []), 'cycleCount', 'shots'])
+
+export const PENALTY_COLUMNS = MATCH_FIELDS
+  .filter(field => field.role === 'penalties')
+  .flatMap(field => [field.key, ...(field.aliases || [])])
 
 export const COMPARE_FIELDS = MATCH_FIELDS
   .filter(field => field.compare)

@@ -10,6 +10,7 @@ import {
   formatNumber,
   getDefenseActionValue,
   getDefenseRatingValue,
+  getPenaltyValue,
   isEmptyDefenseText,
   mergeTeamLists,
   noteText,
@@ -58,6 +59,13 @@ function ScoutingDefenseCard({ team, rows }) {
   const generalPercent = summary.generalAverage == null
     ? 0
     : Math.max(0, Math.min(100, (summary.generalAverage / scale) * 100))
+  const inclusionById = useMemo(() => {
+    const map = new Map()
+    for (const entry of summary.assessedRows || []) {
+      if (entry.id != null) map.set(entry.id, entry.included)
+    }
+    return map
+  }, [summary.assessedRows])
 
   return (
     <article className="role-team-card">
@@ -81,33 +89,47 @@ function ScoutingDefenseCard({ team, rows }) {
             <div className="stat-bar" aria-hidden="true">
               <span style={{ width: `${generalPercent}%` }} />
             </div>
-            <p className="stat-hint">Average scouted Defense Rating across matches. Pin, ram, block, and steal are 0/1 did-or-didn’t flags.</p>
+            <p className="stat-hint">
+              Average Defense Rating from {summary.includedCount} match{summary.includedCount === 1 ? '' : 'es'} where they played defense
+              {summary.excludedCount > 0 ? ` · ${summary.excludedCount} with no checks and 0 stars omitted` : ''}.
+              Highlighted rows in the table are included.
+            </p>
           </div>
 
           <div className="defense-flag-grid" role="list" aria-label={`Defense actions for team ${team}`}>
             {summary.actions.map(action => (
               <DefenseAction key={action.key} action={action} binary={summary.binary} />
             ))}
+            <DefenseAction action={summary.penalties} binary />
           </div>
 
           <div className="team-data-table-container">
             <div className="table-wrapper">
-              <table>
+              <table className="defense-raw-table">
                 <thead>
                   <tr>
                     <th className="sticky-column">Match</th>
                     {DEFENSE_ACTIONS.map(action => (
                       <th key={action.key}>{action.label}</th>
                     ))}
-                    <th>General</th>
+                    <th>Stars</th>
+                    <th>Penalties</th>
+                    <th>In avg</th>
                     <th>Notes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, idx) => {
+                    const assessed = summary.assessedRows?.[idx]
+                    const included = assessed?.included ?? inclusionById.get(row['Scouting ID']) ?? false
                     const general = getDefenseRatingValue(row)
+                    const penalties = getPenaltyValue(row)
                     return (
-                      <tr key={row['Scouting ID'] || `${team}-${idx}`}>
+                      <tr
+                        key={row['Scouting ID'] || `${team}-${idx}`}
+                        className={included ? 'defense-row-included' : 'defense-row-excluded'}
+                        title={included ? 'Included in defense average' : 'Omitted from defense average: no checks and 0 stars'}
+                      >
                         <td className="sticky-column">{formatMatchLabel(row)}</td>
                         {DEFENSE_ACTIONS.map(action => {
                           const value = getDefenseActionValue(row, action)
@@ -117,7 +139,13 @@ function ScoutingDefenseCard({ team, rows }) {
                             </td>
                           )
                         })}
-                        <td>{formatNumber(general, 0)}</td>
+                        <td className={general > 0 ? 'rating-hot' : ''}>{formatNumber(general, 0)}</td>
+                        <td className={penalties ? 'rating-hot' : ''}>{penalties == null ? '—' : penalties ? 'Yes' : 'No'}</td>
+                        <td>
+                          <span className={included ? 'avg-chip avg-chip-on' : 'avg-chip avg-chip-off'}>
+                            {included ? 'Included' : 'Omitted'}
+                          </span>
+                        </td>
                         <td className="wrap-cell">{noteText(row.Notes) || '—'}</td>
                       </tr>
                     )
@@ -218,8 +246,8 @@ function Defense() {
     <div className="role-page">
       <h1>Defense</h1>
       <p className="role-lead">
-        Pin, ram, block, and steal come from scouting ratings. A check means they did that action in at least one match.
-        Qual notes are isolated to the defense field only.
+        Pin, ram, block, steal, and penalties come from scouting. A check means they did that in at least one match.
+        Defense rating averages only matches with a checked action or more than 0 stars. Qual notes are the defense field only.
       </p>
 
       <TeamSelector
