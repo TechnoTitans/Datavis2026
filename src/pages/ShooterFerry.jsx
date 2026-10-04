@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import TeamSelector from '../components/TeamSelector'
 import Loading from '../components/Loading'
 import { useTeamData } from '../hooks/useTeamData'
@@ -22,6 +22,8 @@ const ROLE_COPY = {
   both: { label: 'Shoots and ferries', className: 'role-badge-both' },
   neither: { label: 'Neither recorded', className: 'role-badge-neither' },
 }
+
+const FERRY_KEYWORD = 'ferry'
 
 const handleTeamToggle = (setSelectedTeams) => (teamNumber) => {
   const teamStr = String(teamNumber)
@@ -135,13 +137,13 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
         <section className="role-panel">
           <h4>Ferry</h4>
           <p className="stat-hint">
-            Scouting comments and qual notes matching “{keyword || 'ferry'}”.
+            Scouting comments and qual notes mentioning “ferry”.
           </p>
 
           <div className="ferry-block">
             <h5>Scouting comments</h5>
             {summary.ferryNotes.length === 0 ? (
-              <p>No scouting comments matched that keyword.</p>
+              <p>No scouting comments mentioned ferrying.</p>
             ) : (
               <ul className="ferry-list">
                 {summary.ferryNotes.map((entry, idx) => (
@@ -159,7 +161,7 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
             {qualLoading ? (
               <Loading message="Loading qual notes..." />
             ) : summary.ferryQual.length === 0 ? (
-              <p>No qual notes matched that keyword.</p>
+              <p>No qual notes mentioned ferrying.</p>
             ) : (
               <div className="team-data-table-container">
                 <div className="table-wrapper">
@@ -208,7 +210,6 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
 
 function ShooterFerry() {
   const [selectedTeams, setSelectedTeams] = useSelectedTeams('selectedTeamsShooterFerry', [])
-  const [keyword, setKeyword] = useState('ferry')
   const safeSelected = useMemo(
     () => (Array.isArray(selectedTeams) ? selectedTeams.map(String) : []),
     [selectedTeams],
@@ -221,7 +222,6 @@ function ShooterFerry() {
     [matchTeams, qualTeams],
   )
   const orderedTeams = useMemo(() => orderedTeamIds(safeSelected), [safeSelected])
-  const activeKeyword = keyword.trim() || 'ferry'
 
   const matchRowsByTeam = useMemo(() => {
     const grouped = new Map(orderedTeams.map(team => [team, []]))
@@ -246,7 +246,7 @@ function ShooterFerry() {
     <div className="role-page">
       <h1>Shooter / Ferrying</h1>
       <p className="role-lead">
-        Shooting comes from scouted cycles and tier. Ferrying is keyword-matched from scouting comments and qual notes.
+        Shooting comes from scouted cycles and tier. Ferrying is detected by searching scouting comments and qual notes for "ferry".
         Optimistic score multiplies cycles by the point range of the shooting tier (T1: 0–20, T2: 21–40, T3: 41–60),
         averaged across matches.
       </p>
@@ -260,18 +260,6 @@ function ShooterFerry() {
         showByDefault
       />
 
-      <div className="filter-row">
-        <label className="filter-label">
-          Ferry keyword
-          <input
-            className="filter-input"
-            value={keyword}
-            onChange={event => setKeyword(event.target.value)}
-            placeholder="ferry"
-          />
-        </label>
-      </div>
-
       {orderedTeams.length === 0 ? (
         <p>Select one or more teams to see whether they shoot or ferry.</p>
       ) : (
@@ -282,7 +270,7 @@ function ShooterFerry() {
               team={team}
               matchRows={matchRowsByTeam.get(team) || []}
               qualRows={qualRowsByTeam.get(team) || []}
-              keyword={activeKeyword}
+              keyword={FERRY_KEYWORD}
               matchLoading={matchLoading}
               qualLoading={qualLoading}
             />
