@@ -58,3 +58,17 @@ test('pickMatchRecord keeps only database columns', () => {
   assert.equal(record.Pins, 1)
   assert.equal(pickMatchRecord(parsed).Pins, 1)
 })
+
+test('optional No Show QR suffix preserves old payloads', () => {
+  assert.equal(parseMatchQr(sampleQr)['No Show'], undefined)
+  assert.equal(parseMatchQr(`${sampleQr}\ntrue`)['No Show'], true)
+  assert.equal(stripMatchMeta(parseMatchQr(`${sampleQr}\nfalse`))['No Show'], false)
+  assert.equal(pickMatchRecord({ 'No Show?': 'true' })['No Show'], true)
+  assert.throws(() => parseMatchQr(`${sampleQr}\ninvalid`), /Invalid No Show/)
+})
+
+test('blank QR fields do not shift later values', () => {
+  const payload = sampleQr.split('\n')
+  payload[4] = ''
+  assert.equal(parseMatchQr(payload.join('\n'))['Cycle Count'], 2)
+})

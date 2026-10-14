@@ -2,6 +2,7 @@ import {
   EVENT_CODE,
   MATCH_COLUMN_KEYS,
   MATCH_FIELDS,
+  MATCH_METADATA_FIELDS,
   QR_LINE_COUNT,
   getFieldByColumn,
 } from '../constants/matchSchema.js'
@@ -29,7 +30,7 @@ export const coerceValue = (type, raw) => {
 }
 
 export const parseMatchQr = (qrText) => {
-  const lines = String(qrText || '').split('\n').map(line => line.trim()).filter(line => line !== '')
+  const lines = String(qrText || '').split('\n').map(line => line.trim())
   if (lines.length < QR_LINE_COUNT) {
     throw new Error(`QR data has ${lines.length} lines, expected ${QR_LINE_COUNT}`)
   }
@@ -51,6 +52,12 @@ export const parseMatchQr = (qrText) => {
     data[field.key] = coerceValue(field.type, lines[2 + index])
   })
 
+  // New producers may append No Show after Notes; old payloads remain valid.
+  if (lines[QR_LINE_COUNT]) {
+    const flag = lines[QR_LINE_COUNT].toLowerCase()
+    if (!['true', 'false', '1', '0'].includes(flag)) throw new Error('Invalid No Show flag')
+    data['No Show'] = coerceValue('bool', flag)
+  }
   return data
 }
 
@@ -58,6 +65,10 @@ export const pickMatchRecord = (row = {}) => {
   const record = {}
   for (const key of MATCH_COLUMN_KEYS) {
     if (row[key] !== undefined) record[key] = row[key]
+  }
+  for (const field of MATCH_METADATA_FIELDS) {
+    const source = [field.key, ...(field.aliases || [])].find(key => row[key] != null)
+    if (source) record[field.key] = coerceValue(field.type, row[source])
   }
   if (record['Use Data'] === undefined) record['Use Data'] = true
   return record
@@ -67,6 +78,7 @@ export const getCsvHeaders = () => [...MATCH_COLUMN_KEYS]
 
 export const coerceCsvValue = (header, raw) => {
   const field = getFieldByColumn(header)
+  if (MATCH_METADATA_FIELDS.includes(field) && (raw == null || String(raw).trim() === '')) return null
   if (header === 'Use Data') return coerceValue('bool', raw)
   if (!field) return typeof raw === 'string' ? raw.trim() : raw
   return coerceValue(field.type, raw)

@@ -4,12 +4,13 @@ import { useSelectedTeams } from '../hooks/useLocalStorage'
 import TeamSelector from '../components/TeamSelector'
 import Loading from '../components/Loading'
 import { updateMatchUseData } from '../utils/offlineMutations'
+import { checkCycleOutliers, noShowStatus } from '../utils/cycleOutliers'
 import { toast } from 'sonner'
 
 function TeamData() {
   const [selectedTeams, setSelectedTeams] = useSelectedTeams('selectedTeamsAnalysis', [])
   const safeSelectedTeams = Array.isArray(selectedTeams) ? selectedTeams : []
-  const { allTeams, matchRows, loading, setMatchRows } = useTeamData(safeSelectedTeams, true)
+  const { allTeams, matchRows, loading, setMatchRows } = useTeamData(safeSelectedTeams, false)
 
   const handleTeamToggle = (teamNumber) => {
     const teamStr = String(teamNumber)
@@ -63,7 +64,7 @@ function TeamData() {
     return `${selectedTeams.length} Teams`
   }
 
-  const EXCLUDED_COLUMNS = ['Use Data', 'team', 'Scouting ID', 'Shot Coordinates']
+  const EXCLUDED_COLUMNS = ['Use Data', 'team', 'Scouting ID', 'Shot Coordinates', 'No Show', 'No Show?', 'NoShow', 'no_show']
 
   return (
     <div>
@@ -79,6 +80,7 @@ function TeamData() {
 
       <div style={{ marginTop: '2rem' }}>
         <h2>Matches for {getTeamDisplayText()}</h2>
+        <p>Cycle checks flag invalid counts and unusual values using each team’s interquartile range (at least 4 matches). Review flags before changing Use Data.</p>
         {loading ? (
           <Loading message="Loading matches..." />
         ) : matchRows.length === 0 ? (
@@ -88,9 +90,11 @@ function TeamData() {
             {selectedTeams.map(team => {
               const teamRows = matchRows.filter(row => String(row.team) === String(team))
               if (teamRows.length === 0) return null
-              const visibleCols = Object.keys(teamRows[0]).filter(
+              const visibleCols = [...new Set(teamRows.flatMap(Object.keys))].filter(
                 col => !EXCLUDED_COLUMNS.includes(col)
               )
+
+              const cycleWarnings = checkCycleOutliers(teamRows)
 
               return (
                 <div key={team} className="team-data-table-section">
@@ -101,6 +105,8 @@ function TeamData() {
                         <tr>
                           <th className="sticky-column">Use Data</th>
                           <th className="second-column">Scouting ID</th>
+                          <th>No Show</th>
+                          <th>Cycle Check</th>
                           {visibleCols.map(col => (
                             <th key={col}>{col}</th>
                           ))}
@@ -112,12 +118,16 @@ function TeamData() {
                             <td className="sticky-column">
                               <input
                                 type="checkbox"
-                                checked={!!row['Use Data']}
+                                checked={row['Use Data'] === true || row['Use Data'] === 'true'}
                                 onChange={e => handleUseDataChange(row["Scouting ID"], e.target.checked)}
                               />
                             </td>
                             <td className="second-column">
                               {String(row['Scouting ID'] || '')}
+                            </td>
+                            <td>{noShowStatus(row) == null ? 'Unknown' : noShowStatus(row) ? 'Yes' : 'No'}</td>
+                            <td title={cycleWarnings[idx] || ''}>
+                              {cycleWarnings[idx] ? <strong role="status">Review: {cycleWarnings[idx]}</strong> : '—'}
                             </td>
                             {visibleCols.map(col => {
                               let val = row[col]
