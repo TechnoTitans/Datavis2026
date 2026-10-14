@@ -109,6 +109,7 @@ function ScoutingDefenseCard({ team, rows }) {
                 <thead>
                   <tr>
                     <th className="sticky-column">Match</th>
+                    <th>Scouter</th>
                     {DEFENSE_ACTIONS.map(action => (
                       <th key={action.key}>{action.label}</th>
                     ))}
@@ -131,6 +132,7 @@ function ScoutingDefenseCard({ team, rows }) {
                         title={included ? 'Included in defense average' : 'Omitted from defense average: no checks and 0 stars'}
                       >
                         <td className="sticky-column">{formatMatchLabel(row)}</td>
+                        <td>{row['Scouter Name'] || row._scouterName || '—'}</td>
                         {DEFENSE_ACTIONS.map(action => {
                           const value = getDefenseActionValue(row, action)
                           return (
@@ -182,6 +184,7 @@ function QualDefenseCard({ team, rows, hideEmpty }) {
               <thead>
                 <tr>
                   <th className="sticky-column">Match</th>
+                  <th>Scouter</th>
                   <th>Alliance</th>
                   <th>Teams</th>
                   <th>Defense</th>
@@ -191,6 +194,7 @@ function QualDefenseCard({ team, rows, hideEmpty }) {
                 {visibleRows.map((row, idx) => (
                   <tr key={row.id ?? `${team}-qual-${idx}`}>
                     <td className="sticky-column">{row.match || '—'}</td>
+                    <td>{row.name || '—'}</td>
                     <td>{row.alliance || '—'}</td>
                     <td>{row.teams || '—'}</td>
                     <td className={isEmptyDefenseText(row.defense) ? 'muted-cell' : ''}>

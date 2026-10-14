@@ -14,11 +14,11 @@ function TeamData() {
   const handleTeamToggle = (teamNumber) => {
     const teamStr = String(teamNumber)
     setSelectedTeams(prev => {
-      const prevArray = Array.isArray(prev) ? prev : []
-      if (prevArray.includes(Number(teamStr))) {
-        return prevArray.filter(t => t !== teamStr)
+      if (prev.includes(teamStr)) {
+        return prev.filter(t => t !== teamStr)
+      } else {
+        return [...prev, teamStr]
       }
-      return [...prevArray, teamStr]
     })
   }
 
