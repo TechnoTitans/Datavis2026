@@ -44,10 +44,16 @@ export const MATCH_FIELDS = [
   { key: 'Notes', type: 'string' },
 ]
 
+// Optional metadata does not change the existing positional QR format.
+export const MATCH_METADATA_FIELDS = [
+  { key: 'No Show', type: 'bool', aliases: ['No Show?', 'NoShow', 'no_show'] },
+]
+
 export const MATCH_COLUMN_KEYS = [
   'Scouting ID',
   ...MATCH_FIELDS.map(field => field.key),
   'Use Data',
+  ...MATCH_METADATA_FIELDS.map(field => field.key),
 ]
 
 export const QR_LINE_COUNT = 2 + MATCH_FIELDS.length
@@ -82,4 +88,4 @@ export const COMPARE_FIELDS = MATCH_FIELDS
   }))
 
 export const getFieldByColumn = (column) =>
-  MATCH_FIELDS.find(field => field.key === column || (field.aliases || []).includes(column)) || null
+  [...MATCH_FIELDS, ...MATCH_METADATA_FIELDS].find(field => field.key === column || (field.aliases || []).includes(column)) || null

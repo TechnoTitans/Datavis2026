@@ -3,12 +3,13 @@ import { supabase, supabaseConfigured } from '../supabaseClient'
 import { canEditDatabase } from '../utils/permissions'
 import QrScanner from 'qr-scanner'
 import { approveUnconfirmedData, insertUnconfirmedData, rejectUnconfirmedData } from '../utils/offlineMutations'
-import { scannedDataToCSV, downloadAllData } from '../utils/csvHandler'
+import { scannedDataToCSV, downloadAllData, parseCSV, mergeExportRows } from '../utils/csvHandler'
 import { parseMatchQr, stripMatchMeta } from '../utils/matchRecord'
 import { MATCH_FIELDS } from '../constants/matchSchema'
 import { toast } from 'sonner'
 
 function Upload() {
+  const [isDownloading, setIsDownloading] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [parsedData, setParsedData] = useState(null)
   const [message, setMessage] = useState('')
@@ -73,7 +74,7 @@ function Upload() {
 
   const updateLocalCSV = (data) => {
     try {
-      const csvString = scannedDataToCSV(data)
+      const csvString = scannedDataToCSV(mergeExportRows(parseCSV(localStorage.getItem(STORAGE_KEY) || ''), data))
       setLocalScannedCSV(csvString)
       localStorage.setItem(STORAGE_KEY, csvString)
     } catch (error) {
@@ -226,6 +227,7 @@ function Upload() {
       } else {
         toast.success('Uploaded', { description: 'Added to unconfirmed data.' })
       }
+      updateLocalCSV([dataToInsert])
       setParsedData(null)
       
       if (isAuthenticated) {
@@ -305,13 +307,16 @@ function Upload() {
   }
 
   const handleDownloadAllData = async () => {
+    setIsDownloading(true)
     try {
       toast.message('Downloading...', { description: 'Preparing all data' })
-      await downloadAllData(unconfirmedData)
+      await downloadAllData(unconfirmedData, supabase, localScannedCSV)
       toast.success('Downloaded', { description: 'All data exported to CSV' })
     } catch (error) {
       console.error('Error downloading all data:', error)
       toast.error('Download failed', { description: error.message })
+    } finally {
+      setIsDownloading(false)
     }
   }
 
@@ -381,6 +386,7 @@ function Upload() {
               </p>
             ))}
             
+            {parsedData['No Show'] !== undefined && <p><strong>No Show:</strong> {String(parsedData['No Show'])}</p>}
             <button 
               onClick={uploadToUnconfirmed}
               className="upload-button"
@@ -399,9 +405,9 @@ function Upload() {
           <button 
             onClick={handleDownloadAllData}
             className="download-all-button"
-            disabled={unconfirmedData.length === 0}
+            disabled={isDownloading}
           >
-            Download All Data (Past + Scanned)
+            {isDownloading ? 'Preparing download…' : 'Download All Data (Past + Scanned)'}
           </button>
 
           {unconfirmedData.length === 0 ? (
