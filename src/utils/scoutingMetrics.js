@@ -62,13 +62,18 @@ export const getPenaltyValue = (row) => {
   return parsed > 0
 }
 
+
 export const didPlayDefense = (row) => {
   const rating = getDefenseRatingValue(row)
-  const playedAction = DEFENSE_ACTIONS.some(action => {
+
+  const hasCheckedAction = DEFENSE_ACTIONS.some(action => {
     const value = getDefenseActionValue(row, action)
     return value != null && value > 0
   })
-  return playedAction || (rating != null && rating > 0)
+
+  const hasPositiveRating = rating != null && rating > 0
+
+  return hasCheckedAction || hasPositiveRating
 }
 
 export const mean = (values) => {
