@@ -35,6 +35,9 @@ const handleTeamToggle = (setSelectedTeams) => (teamNumber) => {
   })
 }
 
+const getMatchKey = (row, idx, team) =>
+  `${team}-${String(row?.['Scouting ID'] ?? 'no-id')}-${idx}`
+
 function KeywordText({ text, keyword }) {
   const parts = splitKeywordMatches(text, keyword)
   if (!parts.length) return '—'
@@ -53,10 +56,44 @@ function OptimisticCaption({ summary }) {
 }
 
 function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qualLoading }) {
+  const [excludedMatchKeys, setExcludedMatchKeys] = useState(() => new Set())
+
+  
   const summary = useMemo(
     () => summarizeShooter(matchRows, qualRows, keyword, team),
     [matchRows, qualRows, keyword, team],
   )
+
+  const includedMatchRows = useMemo(
+    () => (matchRows || []).filter(
+      (row, idx) => !excludedMatchKeys.has(getMatchKey(row, idx, team)),
+    ),
+    [matchRows, excludedMatchKeys, team],
+  )
+
+  // Use included matches for scoring only. Keep the full summary for role
+  // detection, ferry notes, and the complete raw scouting table.
+  const scoringSummary = useMemo(
+    () => summarizeShooter(includedMatchRows, [], keyword, team),
+    [includedMatchRows, keyword, team],
+  )
+
+  const toggleMatch = (key) => {
+    setExcludedMatchKeys(previous => {
+      const next = new Set(previous)
+
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+
+      return next
+    })
+  }
+
+  const resetMatchSelections = () => setExcludedMatchKeys(new Set())
+
   const role = ROLE_COPY[summary.role] || ROLE_COPY.neither
   const cycleWarnings = useMemo(
     () => checkCycleOutliers(summary.parsedRows.map(entry => entry.row)),
@@ -83,22 +120,30 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
             <p>No scouting records for this team.</p>
           ) : (
             <>
+            <div className="match-selection-controls">
+            <span>
+              Included matches: {includedMatchRows.length}/{matchRows.length}
+            </span>
+            <button type="button" onClick={resetMatchSelections}>
+              Reset match selections
+            </button>
+          </div>
               <div className="stat-pill-row">
                 <div className="stat-pill">
                   <p className="stat-kicker">Avg cycles</p>
-                  <p className="stat-value">{formatNumber(summary.cycleAvg)}</p>
+                  <p className="stat-value">{formatNumber(scoringSummary.cycleAvg)}</p>
                 </div>
                 <div className="stat-pill">
                   <p className="stat-kicker">Avg tier</p>
-                  <p className="stat-value">{formatNumber(summary.tierAvg)}</p>
-                  <p className="stat-kicker">Fuel range: {formatRange(summary.fuelRange)}</p>
+                  <p className="stat-value">{formatNumber(scoringSummary.tierAvg)}</p>
+                  <p className="stat-kicker">Fuel range: {formatRange(scoringSummary.fuelRange)}</p>
                 </div>
                 <div className="stat-pill stat-pill-accent">
                   <p className="stat-kicker">Avg optimistic score</p>
-                  <p className="stat-value">{formatRange(summary.optimisticRange)}</p>
+                  <p className="stat-value">{formatRange(scoringSummary.optimisticRange)}</p>
                 </div>
               </div>
-              <p className="stat-hint"><OptimisticCaption summary={summary} /></p>
+              <p className="stat-hint"><OptimisticCaption summary={scoringSummary} /></p>
               {summary.locationMapOnly ? (
                 <p className="stat-hint">Some matches only have a painted shooting zone, so those are counted as shooting but not as cycle/fuel totals.</p>
               ) : null}
@@ -108,7 +153,9 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
                   <table>
                     <thead>
                       <tr>
+                        <th>Include</th>
                         <th className="sticky-column">Match</th>
+                        <th>Scouter</th>
                         <th>Cycles</th>
                         <th>Tier</th>
                         <th>Fuel range</th>
@@ -116,10 +163,19 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
                         <th>Notes</th>
                       </tr>
                     </thead>
-                    <tbody>
+                      <tbody>
                       {summary.parsedRows.map((entry, idx) => (
-                        <tr key={entry.row['Scouting ID'] || `${team}-shot-${idx}`} className={cycleWarnings[idx] ? 'cycle-outlier-row' : undefined}>
+                        <tr key={getMatchKey(entry.row, idx, team)} className={cycleWarnings[idx] ? 'cycle-outlier-row' : undefined}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              aria-label={`Include ${entry.matchLabel} in Team ${team} scoring`}
+                              checked={!excludedMatchKeys.has(getMatchKey(entry.row, idx, team))}
+                              onChange={() => toggleMatch(getMatchKey(entry.row, idx, team))}
+                            />
+                          </td>
                           <td className="sticky-column">{entry.matchLabel}</td>
+                          <td>{entry.row['Scouter Name'] || entry.row._scouterName || '—'}</td>
                           <td>{formatNumber(entry.metrics.cycleCount, 0)}</td>
                           <td>{entry.metrics.tier ?? '—'}</td>
                           <td>{formatRange(entry.metrics.fuelRange)}</td>
@@ -132,6 +188,7 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
                         </tr>
                       ))}
                     </tbody>
+
                   </table>
                 </div>
               </div>
@@ -174,6 +231,7 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
                     <thead>
                       <tr>
                         <th className="sticky-column">Match</th>
+                        <th>Scouter</th>
                         <th>Alliance</th>
                         <th>Field</th>
                         <th>Note</th>
@@ -195,6 +253,7 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
                         return fields.map(([field, value]) => (
                           <tr key={`${row.id || idx}-${field}`}>
                             <td className="sticky-column">{row.match || '—'}</td>
+                            <td>{row.name || '—'}</td>
                             <td>{row.alliance || '—'}</td>
                             <td>{field}</td>
                             <td className="wrap-cell"><KeywordText text={value} keyword={keyword} /></td>

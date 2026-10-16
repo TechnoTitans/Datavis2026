@@ -27,6 +27,7 @@ export const useQualData = () => {
           new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
         ])
         if (result.error) throw result.error
+        console.log('Qual data sample:', result.data?.[0])
         if (!cancelled) setRows(result.data || [])
       } catch (err) {
         console.error('Error fetching qual_data:', err)
