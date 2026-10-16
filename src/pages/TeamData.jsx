@@ -3,6 +3,7 @@ import { useTeamData } from '../hooks/useTeamData'
 import { useSelectedTeams } from '../hooks/useLocalStorage'
 import TeamSelector from '../components/TeamSelector'
 import Loading from '../components/Loading'
+import MissingMatches from '../components/MissingMatches'
 import { updateMatchUseData } from '../utils/offlineMutations'
 import { noShowStatus } from '../utils/cycleOutliers'
 import { toast } from 'sonner'
@@ -69,6 +70,7 @@ function TeamData() {
   return (
     <div>
       <h1>Team Data</h1>
+      <MissingMatches />
 
       <TeamSelector
         allTeams={allTeams}
