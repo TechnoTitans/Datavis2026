@@ -3,6 +3,12 @@ import test from 'node:test'
 import { checkCycleOutliers, noShowStatus } from './cycleOutliers.js'
 const rows = counts => counts.map(count => ({ 'Cycle Count': count }))
 
+test('team 7538 flags five cycles in its zero-heavy match history', () => {
+  const flags = checkCycleOutliers(rows([1, 1, 0, 0, 2, 0, 0, 0, 5, 0]))
+  assert.match(flags[8], /Unusual cycle count \(5\).*0\.0–2\.5/)
+  assert.deepEqual(flags.filter((_, index) => index !== 8), Array(9).fill(null))
+})
+
 test('flags unusual counts without flagging normal or missing counts', () => {
   const flags = checkCycleOutliers(rows([4, 5, 5, 6, 50, null]))
   assert.deepEqual(flags.slice(0, 4), [null, null, null, null])

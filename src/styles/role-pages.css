@@ -466,3 +466,15 @@
 .dark .muted-cell {
   color: rgba(148, 163, 184, 0.55);
 }
+.role-page .team-data-table-container table tbody tr.cycle-outlier-row td,
+.role-page .team-data-table-container table tbody tr.cycle-outlier-row:hover td {
+  background-color: #ffedd5;
+  color: #9a3412;
+}
+
+.dark .role-page .team-data-table-container table tbody tr.cycle-outlier-row td,
+.dark .role-page .team-data-table-container table tbody tr.cycle-outlier-row:hover td {
+  background-color: #7c2d12;
+  color: #ffedd5;
+}
+

@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import TeamSelector from '../components/TeamSelector'
 import Loading from '../components/Loading'
 import { useTeamData } from '../hooks/useTeamData'
 import { useQualData } from '../hooks/useQualData'
 import { useSelectedTeams } from '../hooks/useLocalStorage'
+import { checkCycleOutliers } from '../utils/cycleOutliers'
 import {
   extractKeywordLinesForTeam,
   formatNumber,
@@ -57,6 +58,10 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
     [matchRows, qualRows, keyword, team],
   )
   const role = ROLE_COPY[summary.role] || ROLE_COPY.neither
+  const cycleWarnings = useMemo(
+    () => checkCycleOutliers(summary.parsedRows.map(entry => entry.row)),
+    [summary.parsedRows],
+  )
 
   return (
     <article className="role-team-card">
@@ -113,7 +118,7 @@ function ShooterTeamCard({ team, matchRows, qualRows, keyword, matchLoading, qua
                     </thead>
                     <tbody>
                       {summary.parsedRows.map((entry, idx) => (
-                        <tr key={entry.row['Scouting ID'] || `${team}-shot-${idx}`}>
+                        <tr key={entry.row['Scouting ID'] || `${team}-shot-${idx}`} className={cycleWarnings[idx] ? 'cycle-outlier-row' : undefined}>
                           <td className="sticky-column">{entry.matchLabel}</td>
                           <td>{formatNumber(entry.metrics.cycleCount, 0)}</td>
                           <td>{entry.metrics.tier ?? '—'}</td>

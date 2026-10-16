@@ -4,7 +4,7 @@ import { useSelectedTeams } from '../hooks/useLocalStorage'
 import TeamSelector from '../components/TeamSelector'
 import Loading from '../components/Loading'
 import { updateMatchUseData } from '../utils/offlineMutations'
-import { checkCycleOutliers, noShowStatus } from '../utils/cycleOutliers'
+import { noShowStatus } from '../utils/cycleOutliers'
 import { toast } from 'sonner'
 
 function TeamData() {
@@ -80,7 +80,6 @@ function TeamData() {
 
       <div style={{ marginTop: '2rem' }}>
         <h2>Matches for {getTeamDisplayText()}</h2>
-        <p>Cycle checks flag invalid counts and unusual values using each team’s interquartile range (at least 4 matches). Review flags before changing Use Data.</p>
         {loading ? (
           <Loading message="Loading matches..." />
         ) : matchRows.length === 0 ? (
@@ -94,8 +93,6 @@ function TeamData() {
                 col => !EXCLUDED_COLUMNS.includes(col)
               )
 
-              const cycleWarnings = checkCycleOutliers(teamRows)
-
               return (
                 <div key={team} className="team-data-table-section">
                   <h3 className="team-header">Team {team}</h3>
@@ -106,7 +103,6 @@ function TeamData() {
                           <th className="sticky-column">Use Data</th>
                           <th className="second-column">Scouting ID</th>
                           <th>No Show</th>
-                          <th>Cycle Check</th>
                           {visibleCols.map(col => (
                             <th key={col}>{col}</th>
                           ))}
@@ -126,9 +122,6 @@ function TeamData() {
                               {String(row['Scouting ID'] || '')}
                             </td>
                             <td>{noShowStatus(row) == null ? 'Unknown' : noShowStatus(row) ? 'Yes' : 'No'}</td>
-                            <td title={cycleWarnings[idx] || ''}>
-                              {cycleWarnings[idx] ? <strong role="status">Review: {cycleWarnings[idx]}</strong> : '—'}
-                            </td>
                             {visibleCols.map(col => {
                               let val = row[col]
                               if (typeof val === 'boolean' || val === null) {
