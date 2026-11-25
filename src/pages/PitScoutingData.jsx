@@ -1,5 +1,5 @@
-import { useMemo, useEffect, useState } from 'react'
-import { supabase } from '../supabaseClient'
+import { useMemo, useState } from 'react'
+import { useDataTable } from '../hooks/useAppData.js'
 
 const FIELDS = [
   { key: 'drivetrain_type', label: 'Drivetrain' },
@@ -137,32 +137,11 @@ function TeamCard({ team, row }) {
 }
 
 function PitScoutingData() {
-  const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const { rows: rows, loading: loading, error } = useDataTable('pit_scouting_data')
   const [search, setSearch] = useState('')
   const [selectedTeams, setSelectedTeams] = useState([])
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const { data, error } = await supabase
-          .from('pit_scouting_data')
-          .select('*')
-          .order('team_number', { ascending: true })
-        if (error) throw error
-        setRows(data || [])
-      } catch (err) {
-        console.error('Error fetching pit scouting data:', err)
-        setError('Failed to load pit scouting data.')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [])
+
 
   const allTeams = useMemo(() => {
     const seen = new Set()
@@ -191,6 +170,8 @@ function PitScoutingData() {
     if (selectedTeams.length === 1) return `Team ${selectedTeams[0]}`
     return `${selectedTeams.length} Teams`
   }
+
+  if (error) return <p role="alert">{error}</p>
 
   return (
     <div>

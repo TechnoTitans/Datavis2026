@@ -1,26 +1,29 @@
-import { useState, useRef, useEffect } from 'react'
-import { supabase, supabaseConfigured } from '../supabaseClient'
-import { canEditDatabase } from '../utils/permissions'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { useDataTable } from '../hooks/useAppData.js'
+import { subscribeData } from '../utils/backend/data/dataAccessor.js'
+import { listScans, saveScan, periodicUpload } from '../utils/backend/data/uploadQueue.js'
+import { readScanArchive } from '../utils/backend/indexedDB/matchStorage.js'
+import { canEditDatabase } from '../utils/frontend/permissions'
 import QrScanner from 'qr-scanner'
-import { approveUnconfirmedData, insertUnconfirmedData, rejectUnconfirmedData } from '../utils/offlineMutations'
-import { scannedDataToCSV, downloadAllData, parseCSV, mergeExportRows } from '../utils/csvHandler'
-import { parseMatchQr, stripMatchMeta } from '../utils/matchRecord'
+import { approveUnconfirmedData, insertUnconfirmedData, rejectUnconfirmedData } from '../utils/backend/data/uploadQueue'
+import { scannedDataToCSV, mergeScanRows } from '../utils/frontend/csv.js'
+import { parseMatchQr, stripMatchMeta } from '../utils/frontend/matchRecord'
 import { MATCH_FIELDS } from '../constants/matchSchema'
 import { toast } from 'sonner'
 
 function Upload() {
-  const [isDownloading, setIsDownloading] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [parsedData, setParsedData] = useState(null)
   const [message, setMessage] = useState('')
-  const [unconfirmedData, setUnconfirmedData] = useState([])
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [manualInput, setManualInput] = useState('')
-  const [localScannedCSV, setLocalScannedCSV] = useState('')
+  const { rows: unconfirmedData, error: reviewError } = useDataTable('unconfirmed_data', isAuthenticated)
+  const [pendingScans, setPendingScans] = useState([])
+  const [legacyScans, setLegacyScans] = useState([])
+  const localScannedCSV = useMemo(() => scannedDataToCSV(mergeScanRows(legacyScans, pendingScans.map(entry => entry.row))), [legacyScans, pendingScans])
   const videoRef = useRef(null)
   const qrScannerRef = useRef(null)
 
-  const STORAGE_KEY = 'scannedDataCSV'
 
   useEffect(() => {
     setIsAuthenticated(canEditDatabase())
@@ -34,53 +37,23 @@ function Upload() {
   }, [])
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchUnconfirmedData()
+    let active = true
+    const load = async () => {
+      try {
+        const [pending, archive] = await Promise.all([listScans(), readScanArchive()])
+        if (active) { setPendingScans(pending); setLegacyScans(archive) }
+      } catch (error) { if (active) setMessage(`Unable to read saved scans: ${error.message}`) }
     }
-    
-    const savedCSV = localStorage.getItem(STORAGE_KEY)
-    if (savedCSV) {
-      setLocalScannedCSV(savedCSV)
-    }
-  }, [isAuthenticated])
+    void load()
+    const unsubscribe = subscribeData(key => { if (key === 'pending') void load() })
+    return () => { active = false; unsubscribe() }
+  }, [])
 
   useEffect(() => {
     return () => {
       stopScanning()
     }
   }, [])
-
-  const fetchUnconfirmedData = async () => {
-    if (!supabaseConfigured || !supabase) {
-      setUnconfirmedData([])
-      return
-    }
-    try {
-      const { data, error } = await supabase
-        .from('unconfirmed_data')
-        .select('*')
-
-      if (error) {
-        throw error
-      }
-      
-      setUnconfirmedData(data || [])
-      updateLocalCSV(data || [])
-    } catch (error) {
-      console.error('Error fetching unconfirmed data:', error)
-      setMessage(`Error fetching data: ${error.message}`)
-    }
-  }
-
-  const updateLocalCSV = (data) => {
-    try {
-      const csvString = scannedDataToCSV(mergeExportRows(parseCSV(localStorage.getItem(STORAGE_KEY) || ''), data))
-      setLocalScannedCSV(csvString)
-      localStorage.setItem(STORAGE_KEY, csvString)
-    } catch (error) {
-      console.error('Error updating local CSV:', error)
-    }
-  }
 
   const startScanning = async () => {
     try {
@@ -194,12 +167,12 @@ function Upload() {
     }
   }
 
-  const parseQRData = (qrText) => {
+  const parseQRData = async (qrText) => {
     try {
       const data = parseMatchQr(qrText)
-      console.log('Parsed QR:', data)
+      await saveScan(stripMatchMeta(data))
       setParsedData(data)
-      setMessage('QR code parsed successfully!')
+      setMessage('Scan saved on this device. Uploads retry every 30 seconds when online.')
       return data
     } catch (error) {
       console.error('Error parsing QR data:', error)
@@ -227,18 +200,8 @@ function Upload() {
       } else {
         toast.success('Uploaded', { description: 'Added to unconfirmed data.' })
       }
-      updateLocalCSV([dataToInsert])
       setParsedData(null)
       
-      if (isAuthenticated) {
-        if (result.queued) {
-          const newData = [dataToInsert, ...(unconfirmedData || [])]
-          setUnconfirmedData(newData)
-          updateLocalCSV(newData)
-        } else {
-          fetchUnconfirmedData()
-        }
-      }
     } catch (error) {
       console.error('Error uploading data:', error)
       setMessage('Error uploading data: ' + error.message)
@@ -248,7 +211,7 @@ function Upload() {
 
   const approveData = async (unconfirmedItem) => {
     try {
-      const result = await approveUnconfirmedData(unconfirmedItem)
+      const result = await approveUnconfirmedData(stripMatchMeta(unconfirmedItem))
       if (result?.error) throw result.error
 
       setMessage(
@@ -262,13 +225,6 @@ function Upload() {
         toast.success('Approved', { description: unconfirmedItem['Scouting ID'] })
       }
 
-      if (result.queued) {
-        const newData = (unconfirmedData || []).filter(row => row['Scouting ID'] !== unconfirmedItem['Scouting ID'])
-        setUnconfirmedData(newData)
-        updateLocalCSV(newData)
-      } else {
-        fetchUnconfirmedData()
-      }
     } catch (error) {
       console.error('Error approving data:', error)
       setMessage('Error approving data: ' + error.message)
@@ -292,13 +248,6 @@ function Upload() {
         toast.success('Rejected', { description: unconfirmedItem['Scouting ID'] })
       }
 
-      if (result.queued) {
-        const newData = (unconfirmedData || []).filter(row => row['Scouting ID'] !== unconfirmedItem['Scouting ID'])
-        setUnconfirmedData(newData)
-        updateLocalCSV(newData)
-      } else {
-        fetchUnconfirmedData()
-      }
     } catch (error) {
       console.error('Error rejecting data:', error)
       setMessage('Error rejecting data: ' + error.message)
@@ -306,22 +255,18 @@ function Upload() {
     }
   }
 
-  const handleDownloadAllData = async () => {
-    setIsDownloading(true)
-    try {
-      toast.message('Downloading...', { description: 'Preparing all data' })
-      await downloadAllData(unconfirmedData, supabase, localScannedCSV)
-      toast.success('Downloaded', { description: 'All data exported to CSV' })
-    } catch (error) {
-      console.error('Error downloading all data:', error)
-      toast.error('Download failed', { description: error.message })
-    } finally {
-      setIsDownloading(false)
-    }
-  }
-
   return (
     <div className="upload-container">
+      <section className="mb-4" aria-label="Pending uploads">
+        <p role="status">{pendingScans.length} scan(s) waiting to upload.</p>
+        {reviewError && <p role="alert">{reviewError}</p>}
+        <button type="button" disabled={!pendingScans.length} onClick={() => {
+          periodicUpload().ready.catch(error => setMessage(error.message))
+        }}>Upload pending scans</button>
+        {pendingScans.filter(entry => entry.lastError).map(entry => (
+          <p key={entry.scoutingId} role="status">{entry.scoutingId}: {entry.lastError} — will retry.</p>
+        ))}
+      </section>
       <h2>Upload</h2>
       
       {/* QR Scanner Section */}
@@ -402,14 +347,6 @@ function Upload() {
           <h3>Unconfirmed Data Management</h3>
           <p>Review and approve scanned data below:</p>
           
-          <button 
-            onClick={handleDownloadAllData}
-            className="download-all-button"
-            disabled={isDownloading}
-          >
-            {isDownloading ? 'Preparing download…' : 'Download All Data (Past + Scanned)'}
-          </button>
-
           {unconfirmedData.length === 0 ? (
             <p>No unconfirmed data found.</p>
           ) : (
@@ -446,7 +383,7 @@ function Upload() {
           {localScannedCSV && (
             <div className="scanned-csv-preview">
               <h4>Local Scanned Data (CSV Format)</h4>
-              <p className="csv-info">This data is saved locally and will be included when you download all data</p>
+              <p className="csv-info">Scans saved on this device, shown in CSV format.</p>
               <pre className="csv-display">
                 {localScannedCSV}
               </pre>

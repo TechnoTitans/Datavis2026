@@ -1,27 +1,11 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../supabaseClient'
-import { fetchMissingMatches } from '../utils/missingMatches'
+import { useMemo } from 'react'
+import { useDataTable } from '../hooks/useAppData.js'
+import { findMissingMatches } from '../utils/frontend/matchRecord.js'
 
 export default function MissingMatches() {
-  const [missing, setMissing] = useState([])
-
-  useEffect(() => {
-    let cancelled = false
-    async function check() {
-      try {
-        if (!supabase) return
-        const result = await fetchMissingMatches(supabase)
-        if (!cancelled) setMissing(result.missing)
-      } catch (err) {
-        console.error('Unable to check missing matches:', err)
-      }
-    }
-    check()
-    return () => { cancelled = true }
-  }, [])
-
-  if (missing.length === 0) return null
-
+  const { rows, error } = useDataTable('match_data')
+  const { missing } = useMemo(() => findMissingMatches(rows), [rows])
+  if (error || missing.length === 0) return null
   return (
     <section className="mb-6 rounded-xl border border-border bg-card p-4" aria-labelledby="missing-matches-title">
       <h2 id="missing-matches-title">Missing Matches:</h2>

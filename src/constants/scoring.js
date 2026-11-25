@@ -1,5 +1,6 @@
 // Event configuration
 export const EVENT_KEY = '2026GAGWI'
+export const TBA_DISTRICT_KEY = '2026pch'
 
 // Scoring level configurations
 export const SCORING_LEVELS = [

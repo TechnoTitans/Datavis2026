@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Loading from '../components/Loading'
 import Toggle from '../components/Toggle'
-import { useLocalStorage } from '../hooks/useLocalStorage'
-import { supabase, supabaseConfigured } from '../supabaseClient'
+import { useLocalStorage } from '../hooks/usePreferences.js'
+import { useDataTable } from '../hooks/useAppData.js'
 import '../styles/tables.css'
 
 function Rankings() {
@@ -16,38 +16,12 @@ function Rankings() {
   const [useMax, setUseMax] = useLocalStorage('rankingsUseMax', false)
   
   // We need to modify this to get all match data
-  const [allMatchRows, setAllMatchRows] = useState([])
-  const [dataLoading, setDataLoading] = useState(false)
+  const { rows: matchRows, loading: dataLoading, error } = useDataTable('match_data')
 
   // Custom effect to fetch all match data since useTeamData doesn't work with empty array
-  useEffect(() => {
-    const fetchAllMatchData = async () => {
-      setDataLoading(true)
-      try {
-        if (!supabaseConfigured || !supabase) {
-          setAllMatchRows([])
-          return
-        }
-        const { data, error } = await supabase
-          .from('match_data')
-          .select('*')
-          .eq('Use Data', true)
 
-        if (error) {
-          console.error('Error fetching all match data:', error)
-          return
-        }
 
-        setAllMatchRows(data || [])
-      } catch (error) {
-        console.error('Error in fetchAllMatchData:', error)
-      } finally {
-        setDataLoading(false)
-      }
-    }
-
-    fetchAllMatchData()
-  }, [])
+  const allMatchRows = useMemo(() => matchRows.filter(row => row['Use Data'] === true || row['Use Data'] === 'true'), [matchRows])
 
   // Calculate team statistics from match data
   const teamStats = useMemo(() => {
@@ -219,7 +193,7 @@ function Rankings() {
 
   const handleTeamClick = (teamNumber) => {
     localStorage.setItem('selectedTeamsAnalysis', JSON.stringify([String(teamNumber)]))
-    navigate('/team-analysis')
+    navigate('/team-data')
   }
 
   const sortedTeams = [...teamStats].sort((a, b) => {
@@ -251,6 +225,8 @@ function Rankings() {
       </div>
     )
   }
+
+  if (error) return <p role="alert">{error}</p>
 
   return (
     <div className="rankings-container">

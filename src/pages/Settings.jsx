@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { supabase, supabaseConfigured } from '../supabaseClient'
+import { useDataTable } from '../hooks/useAppData.js'
+import { displayLastUpdated, periodicUpdate } from '../utils/backend/data/dataSync.js'
 import '../styles/settings.css'
 import '../styles/tables.css'
-import { updateMatchUseData } from '../utils/offlineMutations'
+import { updateMatchUseData } from '../utils/backend/data/uploadQueue'
 import { toast } from 'sonner'
-import { getCurrentTheme, setThemePreference } from '../lib/theme'
+import { getCurrentTheme, setThemePreference } from '../utils/frontend/theme'
 
 function Settings() {
   const [databaseEditingPerms, setDatabaseEditingPerms] = useState(() => {
@@ -17,8 +18,9 @@ function Settings() {
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [passwordInput, setPasswordInput] = useState('')
   const [pendingToggleValue, setPendingToggleValue] = useState(false)
-  const [unusedMatches, setUnusedMatches] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { rows, loading, error } = useDataTable('match_data')
+  const unusedMatches = rows.filter(row => row['Use Data'] === false || row['Use Data'] === 'false')
+  const [updated, setUpdated] = useState('Not updated yet')
 
   const ADMIN_PASSWORD = '0' // haha hardcoded password
   // its ridiculously hard to hide it well
@@ -26,8 +28,10 @@ function Settings() {
   // rls is too hard
 
   useEffect(() => {
-    fetchUnusedMatches()
-  }, [])
+    let active = true
+    displayLastUpdated().then(text => { if (active) setUpdated(text) }).catch(() => {})
+    return () => { active = false }
+  }, [rows])
 
   useEffect(() => {
     const syncTheme = () => {
@@ -42,31 +46,6 @@ function Settings() {
       window.removeEventListener('storage', syncTheme)
     }
   }, [])
-
-  const fetchUnusedMatches = async () => {
-    if (!supabaseConfigured || !supabase) {
-      setUnusedMatches([])
-      setLoading(false)
-      return
-    }
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('match_data')
-        .select('*')
-        .eq('Use Data', false)
-
-      if (error) {
-        throw error
-      }
-
-      setUnusedMatches(data)
-    } catch (error) {
-      console.error('Error fetching unused matches:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleToggleAttempt = (checked) => {
     if (checked && !databaseEditingPerms) {
@@ -117,13 +96,6 @@ function Settings() {
       const result = await updateMatchUseData({ scoutingId, value: newValue })
       if (result?.error) throw result.error
 
-      // Update local state
-      setUnusedMatches(prevMatches =>
-        prevMatches.map(match =>
-          match["Scouting ID"] === scoutingId ? { ...match, 'Use Data': newValue } : match
-        ).filter(match => !match['Use Data']) // Remove from list if enabled
-      )
-      
       if (result.queued) {
         toast.message(newValue ? 'Match enabled (offline)' : 'Match disabled (offline)', {
           description: 'Queued and will sync when online.',
@@ -140,6 +112,14 @@ function Settings() {
   return (
     <div>
       <h2>Settings</h2>
+      <div className="settings-section">
+        <p role="status">{updated}</p>
+        <button type="button" onClick={() => {
+          const run = periodicUpdate()
+          run.ready.then(() => toast.success('Data refreshed')).catch(error => toast.error(error.message))
+        }}>Refresh data</button>
+        {error && <p role="alert">{error}</p>}
+      </div>
       
       <div className="settings-section">
         <div className="setting-item">

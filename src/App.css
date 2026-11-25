@@ -223,36 +223,6 @@
   color: rgba(203, 213, 225, 0.94);
 }
 
-.download-all-button {
-  min-height: 2.5rem;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.5rem 0.875rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.25rem;
-  background: rgba(0, 0, 255, 0.9);
-  color: #0000FF;
-  border-color: rgba(0, 0, 255, 0.5);
-  margin-bottom: 1rem;
-}
-
-.download-all-button:hover:not(:disabled) {
-  filter: brightness(1.03);
-}
-
-.download-all-button:disabled {
-  background: rgba(0, 0, 255, 0.95);
-  color: rgba(0, 0, 255, 0.96);
-  border-color: rgba(0, 0, 255, 0.42);
-  cursor: not-allowed;
-}
-
-.download-all-button:focus-visible {
-  outline: 2px solid rgba(0, 0, 255, 0.64);
-  outline-offset: 2px;
-}
-
 .scanned-csv-preview {
   margin-top: 2rem;
   border: 1px solid rgba(148, 163, 184, 0.3);
@@ -283,11 +253,6 @@
   max-height: 400px;
   overflow-y: auto;
   color: rgba(10, 10, 10, 0.88);
-}
-
-.dark .download-all-button {
-  background: rgba(0, 0, 0, 0.8);
-  border-color: rgba(0, 0, 255, 0.4);
 }
 
 .dark .scanned-csv-preview {

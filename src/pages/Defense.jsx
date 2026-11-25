@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react'
 import TeamSelector from '../components/TeamSelector'
 import Loading from '../components/Loading'
-import { useTeamData } from '../hooks/useTeamData'
-import { useQualData } from '../hooks/useQualData'
-import { useSelectedTeams } from '../hooks/useLocalStorage'
+import { useTeamData, useQualData } from '../hooks/useScoutingData.js'
+import { useSelectedTeams } from '../hooks/usePreferences.js'
 import {
   DEFENSE_ACTIONS,
   formatMatchLabel,
@@ -18,7 +17,7 @@ import {
   qualRowHasTeam,
   summarizeDefense,
   teamFromMatchRow,
-} from '../utils/scoutingMetrics'
+} from '../utils/frontend/scoutingMetrics'
 
 const handleTeamToggle = (setSelectedTeams) => (teamNumber) => {
   const teamStr = String(teamNumber)
@@ -218,8 +217,8 @@ function Defense() {
     () => (Array.isArray(selectedTeams) ? selectedTeams.map(String) : []),
     [selectedTeams],
   )
-  const { allTeams: matchTeams, matchRows, loading: matchLoading } = useTeamData(safeSelected, true)
-  const { rows: qualRows, teams: qualTeams, loading: qualLoading } = useQualData()
+  const { allTeams: matchTeams, matchRows, loading: matchLoading, error: matchError } = useTeamData(safeSelected, true)
+  const { rows: qualRows, teams: qualTeams, loading: qualLoading, error: qualError } = useQualData()
 
   const allTeams = useMemo(
     () => mergeTeamLists(matchTeams, qualTeams),
@@ -248,6 +247,7 @@ function Defense() {
 
   return (
     <div className="role-page">
+      {(matchError || qualError) && <p role="status">{matchError || qualError}</p>}
       <h1>Defense</h1>
       <p className="role-lead">
         Pin, ram, block, steal, and penalties come from scouting. A check means they did that in at least one match.

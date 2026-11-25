@@ -1,15 +1,14 @@
-import { useMemo, useEffect, useState } from 'react'
-import { supabase } from '../supabaseClient'
-import { useTeamData } from '../hooks/useTeamData'
-import { useSelectedTeams } from '../hooks/useLocalStorage'
+import { useMemo, useState } from 'react'
+import { useDataTable } from '../hooks/useAppData.js'
+import { useTeamData } from '../hooks/useScoutingData.js'
+import { useSelectedTeams } from '../hooks/usePreferences.js'
 import TeamSelector from '../components/TeamSelector'
 import Loading from '../components/Loading'
 
 function QualData() {
   const [selectedTeams, setSelectedTeams] = useSelectedTeams('selectedTeamsQualData', [])
   const { allTeams } = useTeamData(selectedTeams, false)
-  const [qualRows, setQualRows] = useState([])
-  const [loading, setLoading] = useState(false)
+  const { rows: qualRows, loading: loading, error } = useDataTable('qual_data')
   const [matchFilter, setMatchFilter] = useState('')
 
   const handleTeamToggle = (teamNumber) => {
@@ -33,27 +32,7 @@ function QualData() {
     return `${selectedTeams.length} Teams`
   }
 
-  useEffect(() => {
-    const fetchQualData = async () => {
-      setLoading(true)
-      try {
-        const { data, error } = await supabase.from('qual_data').select('*')
-        if (error) {
-          console.error('Error fetching qual_data:', error)
-          setQualRows([])
-          return
-        }
-        setQualRows(data || [])
-      } catch (err) {
-        console.error('Error fetching qual_data:', err)
-        setQualRows([])
-      } finally {
-        setLoading(false)
-      }
-    }
 
-    fetchQualData()
-  }, [])
 
   const filteredRows = useMemo(() => {
     if (!selectedTeams || selectedTeams.length === 0) return []
@@ -74,6 +53,8 @@ function QualData() {
       return rowMatch.includes(matchTerm)
     })
   }, [selectedTeams, matchFilter, qualRows])
+
+  if (error) return <p role="alert">{error}</p>
 
   return (
     <div>
